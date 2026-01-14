@@ -1,0 +1,1759 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GîteKompas FR — Exploitatie-assistent (V1)</title>
+
+  <!-- Fonts (Vercel ok; als je dit later in WP/Divi plakt en geen externe fonts wilt: verwijder deze 2 regels) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --maroon:#800000;
+      --maroon-80: rgba(128,0,0,.80);
+      --maroon-15: rgba(128,0,0,.15);
+      --gold:#d4af37;
+      --text:#232323;
+      --muted:#666;
+      --bg:#ffffff;
+      --panel:#fafafa;
+      --line:#e6e6e6;
+      --warn-bg:#fff3e0;
+      --warn-line:#f57c00;
+      --danger-bg:#ffebee;
+      --danger-line:#d32f2f;
+      --ok-bg:#e8f5e9;
+      --ok-line:#2e7d32;
+      --shadow: 0 10px 30px rgba(0,0,0,.10);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: Mulish, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height:1.8em;
+      color:var(--text);
+      background:#f5f6f7;
+    }
+    .app{
+      max-width:1100px;
+      margin:20px auto;
+      background:var(--bg);
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    header{
+      background:var(--maroon);
+      color:#fff;
+      padding:34px 18px;
+      border-bottom:5px solid var(--gold);
+      text-align:center;
+    }
+    header h1{
+      margin:0;
+      font-family:Poppins, system-ui, sans-serif;
+      font-weight:700;
+      font-size:2rem;
+      line-height:1.2em;
+    }
+    header p{margin:8px 0 0; opacity:.95}
+    .topbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 18px;
+      border-bottom:1px solid var(--line);
+      background:#fff;
+      flex-wrap:wrap;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      font-size:.9rem;
+    }
+    .badge strong{font-family:Poppins, system-ui, sans-serif}
+    .actions{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--maroon);
+      padding:10px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      font-family:Poppins, system-ui, sans-serif;
+      transition: all .2s ease;
+    }
+    .btn:hover{background:var(--maroon-15)}
+    .btn-primary{
+      border-color:var(--maroon);
+      background:var(--maroon);
+      color:#fff;
+    }
+    .btn-primary:hover{filter:brightness(.95)}
+    .btn-ghost{
+      border-color:transparent;
+      background:transparent;
+      color:var(--maroon);
+    }
+
+    /* Tabs */
+    .tabs{
+      display:flex;
+      gap:8px;
+      padding:12px 18px;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    .tab{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:var(--panel);
+      cursor:pointer;
+      white-space:nowrap;
+      font-weight:700;
+      color:var(--maroon);
+      font-family:Poppins, system-ui, sans-serif;
+    }
+    .tab[aria-selected="true"]{
+      background: #fff;
+      border-color: var(--maroon);
+      box-shadow: 0 3px 10px rgba(128,0,0,.10);
+    }
+    .tab .st{
+      font-family:Mulish, system-ui, sans-serif;
+      font-weight:800;
+      width:22px; height:22px;
+      border-radius:50%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      border:1px solid var(--line);
+      font-size:.85rem;
+    }
+    .st.ok{border-color:var(--ok-line); color:var(--ok-line)}
+    .st.warn{border-color:var(--warn-line); color:var(--warn-line)}
+    .st.todo{border-color:var(--line); color:#999}
+
+    /* Layout */
+    .content{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:0;
+    }
+    @media (max-width: 980px){
+      .content{grid-template-columns:1fr}
+    }
+    .main{
+      padding:22px 18px 30px;
+      border-right:1px solid var(--line);
+      background:#fff;
+    }
+    @media (max-width: 980px){
+      .main{border-right:0; border-bottom:1px solid var(--line)}
+    }
+    .side{
+      padding:22px 18px 30px;
+      background:var(--panel);
+    }
+
+    h2,h3{
+      font-family:Poppins, system-ui, sans-serif;
+      color:var(--maroon);
+      line-height:1.25em;
+    }
+    h2{margin:0 0 14px; font-size:1.35rem}
+    h3{margin:20px 0 10px; font-size:1.1rem}
+    .muted{color:var(--muted); font-size:.95rem}
+
+    .card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-left:6px solid var(--maroon);
+      border-radius:10px;
+      padding:16px;
+      margin:14px 0;
+    }
+    .card.soft{
+      border-left-color:var(--warn-line);
+      background:var(--warn-bg);
+    }
+    .card.ok{
+      border-left-color:var(--ok-line);
+      background:var(--ok-bg);
+    }
+    .alert{
+      border-radius:10px;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      background:#fff;
+      margin:12px 0;
+    }
+    .alert.warn{border-left:6px solid var(--warn-line); background:var(--warn-bg)}
+    .alert.danger{border-left:6px solid var(--danger-line); background:var(--danger-bg)}
+    .alert.ok{border-left:6px solid var(--ok-line); background:var(--ok-bg)}
+    .alert strong{font-family:Poppins, system-ui, sans-serif}
+
+    /* Forms */
+    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media (max-width: 720px){ .grid2{grid-template-columns:1fr} }
+
+    label{
+      display:block;
+      font-weight:800;
+      color:var(--maroon);
+      margin:10px 0 6px;
+    }
+    input, select, textarea{
+      width:100%;
+      padding:12px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      font: inherit;
+      background:#fff;
+    }
+    textarea{min-height:90px; resize:vertical}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .row > *{flex:1}
+    .mini{
+      font-size:.9rem;
+      color:#444;
+    }
+
+    /* Inline help (no floating tooltips) */
+    details.help{
+      margin:8px 0 0;
+      padding:10px 12px;
+      border:1px dashed rgba(128,0,0,.35);
+      border-radius:10px;
+      background:#fff;
+    }
+    details.help summary{
+      cursor:pointer;
+      font-weight:800;
+      color:var(--maroon);
+      font-family:Poppins, system-ui, sans-serif;
+      list-style:none;
+    }
+    details.help summary::-webkit-details-marker{display:none}
+    .help .muted{margin-top:6px}
+
+    /* Tables */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:10px;
+      overflow:hidden;
+    }
+    th, td{
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{
+      background:rgba(128,0,0,.06);
+      color:var(--maroon);
+      font-family:Poppins, system-ui, sans-serif;
+      font-weight:700;
+    }
+    td.r{text-align:right; font-weight:800; font-family:Poppins, system-ui, sans-serif}
+    tr:last-child td{border-bottom:0}
+
+    /* Report */
+    .report-wrap{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:16px;
+      margin-top:12px;
+    }
+    .report-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      border-bottom:1px solid var(--line);
+      padding-bottom:10px;
+      margin-bottom:10px;
+    }
+    .report-head .title{
+      font-family:Poppins, system-ui, sans-serif;
+      font-weight:800;
+      color:var(--maroon);
+      font-size:1.15rem;
+      line-height:1.2em;
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--panel);
+      font-size:.9rem;
+    }
+    .kv{display:grid; grid-template-columns: 1fr 1fr; gap:8px}
+    @media (max-width:720px){ .kv{grid-template-columns:1fr} }
+    .kv div{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px;
+      background:#fff;
+    }
+    .kv b{display:block; color:var(--maroon); font-family:Poppins, system-ui, sans-serif}
+    .footnote{font-size:.9rem; color:#444}
+
+    /* Print */
+    @media print{
+      body{background:#fff}
+      .app{box-shadow:none; border:none; margin:0; border-radius:0}
+      header, .tabs, .topbar, .side, .no-print{display:none !important}
+      .content{display:block}
+      .main{border:none; padding:0}
+      .report-wrap{border:none; padding:0}
+      a{color:#000; text-decoration:underline}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <header>
+      <h1>GîteKompas FR</h1>
+      <p>Modulaire exploitatie-assistent (planning → fiscaliteit → marketing → compliance → rapport) — V1</p>
+    </header>
+
+    <div class="topbar no-print">
+      <div class="badge">
+        <strong>Projectstatus</strong>
+        <span id="qualityLabel">Onbekend</span>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" id="btnReset">Reset</button>
+        <button class="btn btn-primary" type="button" id="btnPrint">Print / PDF</button>
+      </div>
+    </div>
+
+    <nav class="tabs no-print" role="tablist" aria-label="Modules">
+      <button class="tab" role="tab" aria-selected="true" data-tab="t1"><span class="st todo" id="st1">1</span> Profiel</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="t2"><span class="st todo" id="st2">2</span> Strategie</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="t3"><span class="st todo" id="st3">3</span> Financiën</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="t4"><span class="st todo" id="st4">4</span> Fiscaal</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="t5"><span class="st todo" id="st5">5</span> Marketing</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="t6"><span class="st todo" id="st6">6</span> Compliance</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="t7"><span class="st todo" id="st7">7</span> Rapport</button>
+    </nav>
+
+    <div class="content">
+      <section class="main" id="main">
+        <!-- TAB 1 -->
+        <div id="t1" class="tabpane" role="tabpanel">
+          <h2>Tab 1 — Profiel & Activiteit</h2>
+          <p class="muted">Leg de context vast. Dit bepaalt de rest van de logica. Je kunt later terugkomen om dit te verbeteren.</p>
+
+          <div class="alert warn" id="gate1" style="display:none"></div>
+
+          <div class="card">
+            <h3>1) Wie ben je in fiscaal opzicht?</h3>
+
+            <div class="grid2">
+              <div>
+                <label for="residentie">Residentie</label>
+                <select id="residentie">
+                  <option value="">Kies...</option>
+                  <option value="fr">FR-resident</option>
+                  <option value="non">Niet-resident</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="sociaal">Sociaal stelsel (hoog niveau)</label>
+                <select id="sociaal">
+                  <option value="">Kies...</option>
+                  <option value="fr">Onder Frans stelsel</option>
+                  <option value="eea">Onder EU/EER-stelsel buiten FR</option>
+                  <option value="unknown">Onbekend / nog te checken</option>
+                </select>
+
+                <details class="help">
+                  <summary>Toelichting</summary>
+                  <div class="muted">
+                    Dit veld is nodig omdat “sociale heffingen” per situatie kunnen verschillen.
+                    Als je dit niet zeker weet: kies “Onbekend” — de tool blijft werken, maar markeert de uitkomsten als indicatief.
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <label for="activiteit">Type activiteit</label>
+            <select id="activiteit">
+              <option value="">Kies...</option>
+              <option value="meuble_non">Meublé de tourisme (niet-geclassificeerd)</option>
+              <option value="meuble_classe">Meublé de tourisme (geclassificeerd)</option>
+              <option value="cdh">Chambre d’hôtes</option>
+              <option value="own_home">Verhuur eigen woning (incidenteel)</option>
+            </select>
+
+            <div class="grid2">
+              <div>
+                <label for="start">Start exploitatie (maand/jaar)</label>
+                <input id="start" type="month" />
+              </div>
+              <div>
+                <label for="groep8">Groepsverhuur (≥ 8 personen)</label>
+                <select id="groep8">
+                  <option value="no">Nee</option>
+                  <option value="yes">Ja</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>2) Locatie (BAN lookup)</h3>
+
+            <div class="row">
+              <div style="min-width:260px">
+                <label for="adres">Adres of postcode</label>
+                <input id="adres" placeholder="Bijv. 24400 Ribérac of straat + plaats" />
+              </div>
+              <div style="flex:0 0 220px; align-self:flex-end">
+                <button class="btn btn-primary" type="button" id="btnBAN">Controleer gemeente</button>
+              </div>
+            </div>
+
+            <div id="banResult" class="alert" style="display:none"></div>
+
+            <details class="help">
+              <summary>Waarom is dit nuttig?</summary>
+              <div class="muted">
+                We slaan gemeente, departement en INSEE-code op. Dat helpt bij compliance-checks en externe verificaties (bijv. zoneringssimulators).
+              </div>
+            </details>
+          </div>
+
+          <div class="card ok" id="contextCard" style="display:none"></div>
+        </div>
+
+        <!-- TAB 2 -->
+        <div id="t2" class="tabpane" role="tabpanel" style="display:none">
+          <h2>Tab 2 — Project & Positionering</h2>
+          <p class="muted">Maak je aanbod concreet: capaciteit, gebruiksmix en onderscheidend vermogen. Dit voedt marketing en financiële scenario’s.</p>
+
+          <div class="alert warn" id="gate2" style="display:none"></div>
+
+          <div class="card">
+            <h3>Capaciteit & indeling</h3>
+            <div class="grid2">
+              <div>
+                <label for="pax">Capaciteit (personen)</label>
+                <input id="pax" type="number" min="1" step="1" value="4" />
+              </div>
+              <div>
+                <label for="kamers">Aantal slaapkamers</label>
+                <input id="kamers" type="number" min="0" step="1" value="2" />
+              </div>
+              <div>
+                <label for="badkamers">Aantal badkamers</label>
+                <input id="badkamers" type="number" min="0" step="1" value="1" />
+              </div>
+              <div>
+                <label for="jaarrond">Exploitatieprofiel</label>
+                <select id="jaarrond">
+                  <option value="seasonal">Sterk seizoensgebonden</option>
+                  <option value="mixed" selected>Gemengd</option>
+                  <option value="yearround">Jaarrond</option>
+                </select>
+              </div>
+            </div>
+
+            <h3>Gebruiksmix</h3>
+            <div class="grid2">
+              <div>
+                <label for="eigenGebruik">Eigen gebruik (% van dagen)</label>
+                <input id="eigenGebruik" type="number" min="0" max="100" step="1" value="10" />
+              </div>
+              <div>
+                <label for="strategieNote">Korte positioneringsnotitie</label>
+                <textarea id="strategieNote" placeholder="Bijv. rust/ruimte, fietsers/wandelaars, familie, workation, luxe, groepsweekenden..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>USP’s (kenmerken)</h3>
+            <div class="grid2">
+              <div>
+                <label for="zwembad">Zwembad</label>
+                <select id="zwembad">
+                  <option value="no">Nee</option>
+                  <option value="yes">Ja</option>
+                </select>
+              </div>
+              <div>
+                <label for="ev">EV-laden</label>
+                <select id="ev">
+                  <option value="no">Nee</option>
+                  <option value="yes">Ja</option>
+                </select>
+              </div>
+              <div>
+                <label for="toeg">Toegankelijkheid</label>
+                <select id="toeg">
+                  <option value="no">Nee</option>
+                  <option value="yes">Ja</option>
+                </select>
+              </div>
+              <div>
+                <label for="huisdieren">Huisdieren</label>
+                <select id="huisdieren">
+                  <option value="no">Niet toegestaan</option>
+                  <option value="yes">Toegestaan</option>
+                </select>
+              </div>
+            </div>
+
+            <details class="help">
+              <summary>Praktisch</summary>
+              <div class="muted">
+                Deze flags sturen adviesteksten (marketing) en kostenblokken (financiën). Je hoeft ze niet perfect te hebben voor een eerste run.
+              </div>
+            </details>
+          </div>
+
+          <div class="card ok" id="strategieCard" style="display:none"></div>
+        </div>
+
+        <!-- TAB 3 -->
+        <div id="t3" class="tabpane" role="tabpanel" style="display:none">
+          <h2>Tab 3 — Financiën: investeringen, kosten, financiering</h2>
+          <p class="muted">Vul minimaal je jaarlijkse kosten in. De fiscale tab gebruikt dit om “réel” realistisch te benaderen.</p>
+
+          <div class="alert warn" id="gate3" style="display:none"></div>
+
+          <div class="card">
+            <h3>3A) Investeringen (CAPEX)</h3>
+            <div class="grid2">
+              <div>
+                <label for="capexRenov">Renovatie (totaal)</label>
+                <input id="capexRenov" type="number" min="0" step="100" value="0">
+              </div>
+              <div>
+                <label for="capexMeubilair">Meubilair / inrichting</label>
+                <input id="capexMeubilair" type="number" min="0" step="100" value="0">
+              </div>
+              <div>
+                <label for="capexApp">Apparatuur / installaties</label>
+                <input id="capexApp" type="number" min="0" step="100" value="0">
+              </div>
+              <div>
+                <label for="capexZwembad">Zwembad (CAPEX)</label>
+                <input id="capexZwembad" type="number" min="0" step="100" value="0">
+              </div>
+            </div>
+
+            <details class="help">
+              <summary>Fiscale nuance (V1)</summary>
+              <div class="muted">
+                In régime réel kunnen bepaalde investeringen via afschrijving doorwerken. V1 rekent dit alleen indicatief (Tab 4) op basis van een simpele “afschrijving-inschatting”.
+              </div>
+            </details>
+          </div>
+
+          <div class="card">
+            <h3>3B) Jaarlijkse kosten (OPEX)</h3>
+            <div class="grid2">
+              <div><label for="opexEnergie">Energie/water</label><input id="opexEnergie" type="number" min="0" step="50" value="0"></div>
+              <div><label for="opexInternet">Internet/telefoon</label><input id="opexInternet" type="number" min="0" step="10" value="0"></div>
+              <div><label for="opexVerz">Verzekeringen</label><input id="opexVerz" type="number" min="0" step="50" value="0"></div>
+              <div><label for="opexSchoon">Schoonmaak/linnen</label><input id="opexSchoon" type="number" min="0" step="50" value="0"></div>
+              <div><label for="opexOnderhoud">Onderhoud/kleine reparaties</label><input id="opexOnderhoud" type="number" min="0" step="50" value="0"></div>
+              <div><label for="opexAdmin">Accountant/administratie</label><input id="opexAdmin" type="number" min="0" step="50" value="0"></div>
+              <div><label for="opexCFE">CFE (overschrijfbaar)</label><input id="opexCFE" type="number" min="0" step="50" value="0"></div>
+              <div><label for="opexOverig">Overig</label><input id="opexOverig" type="number" min="0" step="50" value="0"></div>
+            </div>
+
+            <div class="alert" id="opexSummary" style="margin-top:12px"></div>
+          </div>
+
+          <div class="card">
+            <h3>3C) Financiering (informatief scenario)</h3>
+            <div class="grid2">
+              <div><label for="finEigen">Eigen middelen (indicatief)</label><input id="finEigen" type="number" min="0" step="1000" value="0"></div>
+              <div><label for="finLening">Leningbedrag (0 = geen)</label><input id="finLening" type="number" min="0" step="1000" value="0"></div>
+              <div><label for="finRente">Rente (% p/j)</label><input id="finRente" type="number" min="0" step="0.1" value="3.5"></div>
+              <div><label for="finJaren">Looptijd (jaren)</label><input id="finJaren" type="number" min="1" step="1" value="20"></div>
+            </div>
+
+            <div class="alert" id="finSummary" style="margin-top:12px"></div>
+
+            <details class="help">
+              <summary>Niet-resident & financiering</summary>
+              <div class="muted">
+                Financiering voor niet-residenten is vaak lastiger en bankvoorwaarden verschillen sterk. Deze tool geeft geen bankadvies; het is een scenario-rekenhulp en checklistbasis voor je dossier.
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- TAB 4 -->
+        <div id="t4" class="tabpane" role="tabpanel" style="display:none">
+          <h2>Tab 4 — Fiscaal (micro vs réel) — indicatief</h2>
+          <p class="muted">V1 werkt met eenvoudige regels en jouw kosteninput. Voor aangifte-zekerheid blijft een accountant leidend.</p>
+
+          <div class="alert warn" id="gate4" style="display:none"></div>
+
+          <div class="card">
+            <h3>Omzet & regime</h3>
+            <div class="grid2">
+              <div>
+                <label for="omzet">Jaaromzet (verwacht of gerealiseerd)</label>
+                <input id="omzet" type="number" min="0" step="100" value="20000">
+              </div>
+              <div>
+                <label for="regime">Regime</label>
+                <select id="regime">
+                  <option value="advise" selected>Laat tool adviseren</option>
+                  <option value="micro">Micro-BIC</option>
+                  <option value="reel">Régime réel</option>
+                </select>
+              </div>
+            </div>
+
+            <details class="help">
+              <summary>Parameters (V1)</summary>
+              <div class="muted">
+                Micro-BIC gebruikt vaste abattements en omzetplafonds per activiteitstype (set in de config).
+                Régime réel gebruikt jouw OPEX-totaal uit Tab 3 (en een optionele indicatieve afschrijving).
+              </div>
+            </details>
+          </div>
+
+          <div class="card">
+            <h3>ZFRR (alleen als bevestigd)</h3>
+            <div class="grid2">
+              <div>
+                <label for="zfrrOk">ZFRR bevestigd via officiële simulator</label>
+                <select id="zfrrOk">
+                  <option value="no" selected>Nee</option>
+                  <option value="yes">Ja</option>
+                </select>
+              </div>
+              <div>
+                <label for="zfrrYear">Exploitatiejaar (afbouw)</label>
+                <select id="zfrrYear" disabled>
+                  <option value="1">Jaar 1 t/m 5 (100%)</option>
+                  <option value="6">Jaar 6 (75%)</option>
+                  <option value="7">Jaar 7 (50%)</option>
+                  <option value="8">Jaar 8 (25%)</option>
+                  <option value="9">Jaar 9+ (0%)</option>
+                </select>
+              </div>
+            </div>
+            <div class="alert" id="zfrrNote"></div>
+          </div>
+
+          <div class="card">
+            <h3>Indicatieve afschrijving (alleen voor scenario)</h3>
+            <div class="grid2">
+              <div>
+                <label for="depPct">Afschrijving-inschatting (% van CAPEX per jaar)</label>
+                <input id="depPct" type="number" min="0" max="20" step="0.5" value="0">
+              </div>
+              <div>
+                <label for="worldIncome">Niet-resident: wereldinkomen (optioneel)</label>
+                <input id="worldIncome" type="number" min="0" step="1000" value="0" placeholder="Alleen voor scenario’s">
+              </div>
+            </div>
+            <div class="muted">Let op: V1 gebruikt dit uitsluitend om bandbreedtes te tonen (geen aanslag-garantie).</div>
+          </div>
+
+          <div class="card ok" id="taxResult"></div>
+        </div>
+
+        <!-- TAB 5 -->
+        <div id="t5" class="tabpane" role="tabpanel" style="display:none">
+          <h2>Tab 5 — Marketing & kanalen (scenario’s)</h2>
+          <p class="muted">Hier dwing je scenario-denken af: bezetting en prijs zijn nooit “één waarheid”.</p>
+
+          <div class="alert warn" id="gate5" style="display:none"></div>
+
+          <div class="card">
+            <h3>Kanalenmix</h3>
+
+            <div class="grid2">
+              <div>
+                <label for="shareAirbnb">Airbnb aandeel (%)</label>
+                <input id="shareAirbnb" type="number" min="0" max="100" step="1" value="40">
+              </div>
+              <div>
+                <label for="feeAirbnb">Airbnb commissie (%)</label>
+                <input id="feeAirbnb" type="number" min="0" max="40" step="0.1" value="15">
+              </div>
+              <div>
+                <label for="shareBooking">Booking aandeel (%)</label>
+                <input id="shareBooking" type="number" min="0" max="100" step="1" value="40">
+              </div>
+              <div>
+                <label for="feeBooking">Booking commissie (%)</label>
+                <input id="feeBooking" type="number" min="0" max="40" step="0.1" value="15">
+              </div>
+              <div>
+                <label for="shareDirect">Direct aandeel (%)</label>
+                <input id="shareDirect" type="number" min="0" max="100" step="1" value="20">
+              </div>
+              <div>
+                <label for="feeDirect">Direct kosten (%)</label>
+                <input id="feeDirect" type="number" min="0" max="20" step="0.1" value="2">
+              </div>
+            </div>
+
+            <div class="alert" id="mixNote"></div>
+
+            <details class="help">
+              <summary>Waarom aandeel + commissie?</summary>
+              <div class="muted">
+                Je kunt meerdere kanalen combineren. De tool rekent met een gewogen commissie en zet dit automatisch als variabele kostencomponent in je scenario-netto.
+              </div>
+            </details>
+          </div>
+
+          <div class="card">
+            <h3>Prijs & bezetting (3 scenario’s)</h3>
+
+            <div class="grid2">
+              <div>
+                <label for="avgPrice">Gemiddelde prijs per nacht (€)</label>
+                <input id="avgPrice" type="number" min="0" step="1" value="120">
+              </div>
+              <div>
+                <label for="cleaningPerStay">Schoonmaak per verblijf (€) (optioneel)</label>
+                <input id="cleaningPerStay" type="number" min="0" step="5" value="0">
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div><label for="occLow">Bezetting conservatief (%)</label><input id="occLow" type="number" min="0" max="100" step="1" value="25"></div>
+              <div><label for="occMid">Bezetting realistisch (%)</label><input id="occMid" type="number" min="0" max="100" step="1" value="40"></div>
+              <div><label for="occHigh">Bezetting optimistisch (%)</label><input id="occHigh" type="number" min="0" max="100" step="1" value="55"></div>
+            </div>
+
+            <div class="grid2">
+              <div><label for="avgStayNights">Gemiddelde verblijfsduur (nachten)</label><input id="avgStayNights" type="number" min="1" step="1" value="5"></div>
+              <div><label for="blockDays">Geblokkeerde dagen (onderhoud/privé)</label><input id="blockDays" type="number" min="0" step="1" value="0"></div>
+            </div>
+          </div>
+
+          <div class="card ok" id="mktResult"></div>
+        </div>
+
+        <!-- TAB 6 -->
+        <div id="t6" class="tabpane" role="tabpanel" style="display:none">
+          <h2>Tab 6 — Compliance & tijdlijn</h2>
+          <p class="muted">Dynamische checklist op basis van jouw profiel. Dit is geen juridisch advies; het helpt je niets te vergeten.</p>
+
+          <div class="alert warn" id="gate6" style="display:none"></div>
+
+          <div class="card">
+            <h3>Checklist (dynamisch)</h3>
+            <div id="complianceList"></div>
+          </div>
+
+          <div class="card">
+            <h3>Tijdlijn (indicatief)</h3>
+            <div id="timeline"></div>
+          </div>
+        </div>
+
+        <!-- TAB 7 -->
+        <div id="t7" class="tabpane" role="tabpanel" style="display:none">
+          <h2>Tab 7 — Rapport (print/PDF)</h2>
+          <p class="muted">Dit rapport bundelt jouw aannames en uitkomsten. Gebruik “Print / PDF” bovenaan voor een professioneel dossier.</p>
+
+          <div class="report-wrap" id="report">
+            <div class="report-head">
+              <div>
+                <div class="title">GîteKompas FR — Projectrapport</div>
+                <div class="muted" id="reportMeta"></div>
+              </div>
+              <div class="pill"><b>Versie</b> <span id="ver">V1</span></div>
+            </div>
+
+            <div class="kv" id="reportKV"></div>
+
+            <h3>Samenvatting (kerncijfers)</h3>
+            <div id="reportKPIs"></div>
+
+            <h3>Aannames & datakwaliteit</h3>
+            <div id="reportAssumptions"></div>
+
+            <h3>Financiën</h3>
+            <div id="reportFin"></div>
+
+            <h3>Fiscaal (indicatief)</h3>
+            <div id="reportTax"></div>
+
+            <h3>Marketing (scenario’s)</h3>
+            <div id="reportMkt"></div>
+
+            <h3>Compliance & tijdlijn</h3>
+            <div id="reportComp"></div>
+
+            <div class="footnote" style="margin-top:14px">
+              <b>Disclaimer:</b> Dit instrument is een beslis- en planningshulp. Uitkomsten zijn indicatief en hangen af van wetgeving, lokale regels en jouw exacte situatie.
+              Voor bindende conclusies: laat je dossier toetsen door een Franse accountant/notaris.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side no-print">
+        <h2>Overzicht</h2>
+        <div class="muted">Snelle controle van wat ontbreekt voor betrouwbare uitkomsten.</div>
+
+        <div class="card" id="sideStatus"></div>
+
+        <div class="card soft">
+          <h3>Werkwijze</h3>
+          <div class="mini">
+            <b>Soft gates:</b> je mag overal starten, maar de tool toont duidelijk wat nog ontbreekt.<br>
+            <b>Geen zwevende tooltips:</b> uitleg staat onder velden en is klikbaar (details/summary).<br>
+            <b>Scenario’s:</b> marketing en niet-resident onderdelen werken met bandbreedtes.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const VERSION = "V1";
+  const fmtEUR = (n) => {
+    const x = Number.isFinite(n) ? n : 0;
+    return "€ " + x.toLocaleString("nl-NL",{maximumFractionDigits:0});
+  };
+  const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+  const nowISO = ()=>new Date().toISOString().slice(0,10);
+
+  // --- Config (V1) ---
+  // Micro-BIC parameters (indicatief; set per jaargang in één plek).
+  // V1 gebruikt: non classé 30% / 15k; classé 50% / 77.7k; chambre d’hôtes in V1 gelijk aan classé.
+  const MICRO = {
+    meuble_non:  { abatt: 0.30, limit: 15000, label:"Meublé non classé" },
+    meuble_classe:{ abatt: 0.50, limit: 77700, label:"Meublé classé" },
+    cdh:         { abatt: 0.50, limit: 77700, label:"Chambre d’hôtes" },
+    own_home:    { abatt: 0.30, limit: 15000, label:"Verhuur eigen woning (indicatief)" }
+  };
+
+  // --- State ---
+  const state = {
+    context: {
+      residentie:"", sociaal:"", activiteit:"", start:"",
+      groep8:"no", adres:"", commune:"", insee:"", dep:""
+    },
+    project: {
+      pax:4, kamers:2, badkamers:1, jaarrond:"mixed", eigenGebruik:10,
+      zwembad:"no", ev:"no", toeg:"no", huisdieren:"no", strategieNote:""
+    },
+    financials: {
+      capexRenov:0, capexMeubilair:0, capexApp:0, capexZwembad:0,
+      opexEnergie:0, opexInternet:0, opexVerz:0, opexSchoon:0, opexOnderhoud:0, opexAdmin:0, opexCFE:0, opexOverig:0,
+      finEigen:0, finLening:0, finRente:3.5, finJaren:20
+    },
+    tax: {
+      omzet:20000, regime:"advise",
+      zfrrOk:"no", zfrrYear:1,
+      depPct:0, worldIncome:0
+    },
+    marketing: {
+      shareAirbnb:40, feeAirbnb:15,
+      shareBooking:40, feeBooking:15,
+      shareDirect:20, feeDirect:2,
+      avgPrice:120, cleaningPerStay:0,
+      occLow:25, occMid:40, occHigh:55,
+      avgStayNights:5, blockDays:0
+    }
+  };
+
+  // --- DOM helpers ---
+  const $ = (id)=>document.getElementById(id);
+  const tabs = Array.from(document.querySelectorAll(".tab"));
+  const panes = ["t1","t2","t3","t4","t5","t6","t7"].map(id=>$(id));
+
+  function setTab(tabId){
+    tabs.forEach(b=>{
+      const sel = b.dataset.tab === tabId;
+      b.setAttribute("aria-selected", sel ? "true" : "false");
+    });
+    panes.forEach(p=>p.style.display = (p.id===tabId) ? "block" : "none");
+    // Soft gate messages on open
+    renderGates(tabId);
+    // Always refresh outputs
+    renderAll();
+  }
+
+  tabs.forEach(b=>b.addEventListener("click", ()=>setTab(b.dataset.tab)));
+
+  // --- Bind inputs to state ---
+  function bind(id, path, parser=(v)=>v){
+    const el = $(id);
+    const [root, key] = path.split(".");
+    el.addEventListener("input", ()=>{
+      state[root][key] = parser(el.value);
+      renderAll();
+    });
+    el.addEventListener("change", ()=>{
+      state[root][key] = parser(el.value);
+      renderAll();
+    });
+  }
+
+  // Tab1
+  bind("residentie","context.residentie");
+  bind("sociaal","context.sociaal");
+  bind("activiteit","context.activiteit");
+  bind("start","context.start");
+  bind("groep8","context.groep8");
+  $("adres").addEventListener("input", ()=>{ state.context.adres = $("adres").value; });
+
+  // Tab2
+  bind("pax","project.pax",(v)=>Number(v||0));
+  bind("kamers","project.kamers",(v)=>Number(v||0));
+  bind("badkamers","project.badkamers",(v)=>Number(v||0));
+  bind("jaarrond","project.jaarrond");
+  bind("eigenGebruik","project.eigenGebruik",(v)=>clamp(Number(v||0),0,100));
+  bind("zwembad","project.zwembad");
+  bind("ev","project.ev");
+  bind("toeg","project.toeg");
+  bind("huisdieren","project.huisdieren");
+  bind("strategieNote","project.strategieNote");
+
+  // Tab3 CAPEX
+  ["capexRenov","capexMeubilair","capexApp","capexZwembad"].forEach(id=>bind(id, "financials."+id, v=>Number(v||0)));
+  // Tab3 OPEX
+  ["opexEnergie","opexInternet","opexVerz","opexSchoon","opexOnderhoud","opexAdmin","opexCFE","opexOverig"].forEach(id=>bind(id, "financials."+id, v=>Number(v||0)));
+  // Tab3 Financing
+  ["finEigen","finLening","finJaren"].forEach(id=>bind(id, "financials."+id, v=>Number(v||0)));
+  bind("finRente","financials.finRente", v=>Number(v||0));
+
+  // Tab4
+  bind("omzet","tax.omzet", v=>Number(v||0));
+  bind("regime","tax.regime");
+  bind("zfrrOk","tax.zfrrOk");
+  bind("zfrrYear","tax.zfrrYear", v=>Number(v||1));
+  bind("depPct","tax.depPct", v=>Number(v||0));
+  bind("worldIncome","tax.worldIncome", v=>Number(v||0));
+
+  // Tab5
+  ["shareAirbnb","feeAirbnb","shareBooking","feeBooking","shareDirect","feeDirect",
+   "avgPrice","cleaningPerStay","occLow","occMid","occHigh","avgStayNights","blockDays"
+  ].forEach(id=>{
+    const root = "marketing";
+    bind(id, root+"."+id, v=>Number(v||0));
+  });
+
+  // --- BAN lookup ---
+  $("btnBAN").addEventListener("click", async ()=>{
+    const q = ($("adres").value||"").trim();
+    const box = $("banResult");
+    box.style.display="block";
+    if(!q){ box.className="alert danger"; box.innerHTML="<strong>Ontbreekt:</strong> vul een adres of postcode in."; return; }
+    box.className="alert";
+    box.innerHTML="Zoeken via BAN/Adresse API...";
+    try{
+      const url = "https://api-adresse.data.gouv.fr/search/?q="+encodeURIComponent(q)+"&limit=1";
+      const r = await fetch(url);
+      const d = await r.json();
+      if(d && d.features && d.features.length){
+        const p = d.features[0].properties || {};
+        state.context.commune = p.city || "";
+        state.context.insee = p.citycode || "";
+        state.context.dep = (p.postcode||"").slice(0,2) || "";
+        box.className="alert ok";
+        box.innerHTML =
+          "<strong>Gevonden:</strong> "+(p.label||q)+
+          "<br><b>Gemeente:</b> "+(state.context.commune||"-")+
+          "<br><b>INSEE:</b> "+(state.context.insee||"-")+
+          "<br><b>Departement:</b> "+(state.context.dep||"-");
+        renderAll();
+      } else {
+        box.className="alert danger";
+        box.innerHTML="<strong>Geen resultaat:</strong> probeer een concretere zoekterm (plaats + postcode).";
+      }
+    } catch(e){
+      box.className="alert danger";
+      box.innerHTML="<strong>API-fout:</strong> BAN lookup niet beschikbaar. Probeer later opnieuw.";
+    }
+  });
+
+  // --- Reset / Print ---
+  $("btnReset").addEventListener("click", ()=>{
+    localStorage.removeItem("gitekompas_v1");
+    location.reload();
+  });
+  $("btnPrint").addEventListener("click", ()=>{
+    setTab("t7");
+    setTimeout(()=>window.print(), 50);
+  });
+
+  // --- Persistence ---
+  function save(){
+    try{ localStorage.setItem("gitekompas_v1", JSON.stringify(state)); }catch(e){}
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem("gitekompas_v1");
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      if(s && s.context && s.project && s.financials && s.tax && s.marketing){
+        Object.assign(state.context, s.context);
+        Object.assign(state.project, s.project);
+        Object.assign(state.financials, s.financials);
+        Object.assign(state.tax, s.tax);
+        Object.assign(state.marketing, s.marketing);
+      }
+    }catch(e){}
+  }
+
+  // --- Quality / prerequisites ---
+  function hasTab1(){
+    return !!(state.context.residentie && state.context.activiteit && state.context.start);
+  }
+  function hasLocation(){
+    return !!(state.context.commune && state.context.insee);
+  }
+  function hasTab2(){
+    return Number(state.project.pax||0) > 0 && Number(state.project.eigenGebruik||0) >= 0;
+  }
+  function hasTab3(){
+    // minimal: at least some OPEX filled OR explicit zero is fine; require user touched it?
+    // V1: require that user has set any opex field or CFE, OR omzet exists.
+    const f = state.financials;
+    const opex = f.opexEnergie+f.opexInternet+f.opexVerz+f.opexSchoon+f.opexOnderhoud+f.opexAdmin+f.opexCFE+f.opexOverig;
+    return opex >= 0; // always true; we'll use datakwaliteit instead
+  }
+
+  function qualityScore(){
+    let score = 0;
+    if(hasTab1()) score += 30;
+    if(hasLocation()) score += 15;
+    if(hasTab2()) score += 15;
+    // OPEX completeness: if user filled at least 3 categories >0
+    const f = state.financials;
+    const o = [f.opexEnergie,f.opexInternet,f.opexVerz,f.opexSchoon,f.opexOnderhoud,f.opexAdmin,f.opexCFE,f.opexOverig].filter(x=>Number(x||0)>0).length;
+    if(o>=1) score += 10;
+    if(o>=3) score += 10;
+    if(Number(state.tax.omzet||0)>0) score += 10;
+    // Marketing fields sanity
+    const m = state.marketing;
+    if(Number(m.avgPrice||0)>0) score += 5;
+    if(Number(m.occMid||0)>0) score += 5;
+    return clamp(score,0,100);
+  }
+
+  function statusMark(el, kind){
+    el.classList.remove("ok","warn","todo");
+    el.classList.add(kind);
+  }
+
+  function updateTabBadges(){
+    // Tab1
+    const t1ok = hasTab1();
+    statusMark($("st1"), t1ok ? "ok" : "todo");
+
+    // Tab2
+    const t2ok = hasTab2();
+    statusMark($("st2"), t2ok ? "ok" : (t1ok ? "warn" : "todo"));
+
+    // Tab3
+    // mark warn if opex blank
+    const f = state.financials;
+    const o = [f.opexEnergie,f.opexInternet,f.opexVerz,f.opexSchoon,f.opexOnderhoud,f.opexAdmin,f.opexCFE,f.opexOverig].filter(x=>Number(x||0)>0).length;
+    statusMark($("st3"), o>=3 ? "ok" : (o>=1 ? "warn" : "todo"));
+
+    // Tab4
+    const t4ok = Number(state.tax.omzet||0)>0 && !!state.context.activiteit;
+    statusMark($("st4"), t4ok ? "ok" : "todo");
+
+    // Tab5
+    const m = state.marketing;
+    const t5ok = Number(m.avgPrice||0)>0 && Number(m.occMid||0)>0;
+    statusMark($("st5"), t5ok ? "ok" : "warn");
+
+    // Tab6 & 7 depend on earlier
+    statusMark($("st6"), (t1ok && t4ok) ? "ok" : "warn");
+    statusMark($("st7"), (t1ok && t4ok) ? "ok" : "warn");
+  }
+
+  function renderGates(tabId){
+    const gates = {
+      t1: $("gate1"),
+      t2: $("gate2"),
+      t3: $("gate3"),
+      t4: $("gate4"),
+      t5: $("gate5"),
+      t6: $("gate6")
+    };
+    Object.values(gates).forEach(x=>{ if(x) x.style.display="none"; });
+
+    const baseMissing = [];
+    if(!hasTab1()) baseMissing.push("Tab 1 (residentie, activiteit, start)");
+    if(!hasLocation()) baseMissing.push("Locatie (gemeente/INSEE via BAN)");
+
+    const advise = (el, msg)=>{
+      el.innerHTML = "<strong>Aanbevolen:</strong> "+msg;
+      el.style.display="block";
+    };
+
+    if(tabId==="t2"){
+      if(!hasTab1()) advise(gates.t2, "begin met Tab 1. Zonder context worden adviezen minder betrouwbaar.");
+    }
+    if(tabId==="t3"){
+      if(!hasTab1() || !hasTab2()){
+        advise(gates.t3, "doorloop eerst Tab 1–2. Je mag hier starten, maar resultaten in Tab 4/5 worden indicatief.");
+      }
+    }
+    if(tabId==="t4" || tabId==="t5" || tabId==="t6"){
+      if(baseMissing.length){
+        advise(gates[tabId], "vul eerst: "+baseMissing.join(" + ")+". Je kunt doorgaan, maar de tool markeert uitkomsten als indicatief.");
+      }
+      // extra: for fiscal
+      if(tabId==="t4"){
+        const f = state.financials;
+        const o = [f.opexEnergie,f.opexInternet,f.opexVerz,f.opexSchoon,f.opexOnderhoud,f.opexAdmin,f.opexCFE,f.opexOverig].filter(x=>Number(x||0)>0).length;
+        if(o===0){
+          advise(gates.t4, "vul in Tab 3 minimaal je belangrijkste jaarlijkse kosten in. Anders is régime réel niet zinnig te vergelijken.");
+        }
+      }
+    }
+  }
+
+  // --- Calculations ---
+  function sumOpex(){
+    const f = state.financials;
+    return Number(f.opexEnergie||0)+Number(f.opexInternet||0)+Number(f.opexVerz||0)+Number(f.opexSchoon||0)+
+           Number(f.opexOnderhoud||0)+Number(f.opexAdmin||0)+Number(f.opexCFE||0)+Number(f.opexOverig||0);
+  }
+
+  function sumCapex(){
+    const f = state.financials;
+    return Number(f.capexRenov||0)+Number(f.capexMeubilair||0)+Number(f.capexApp||0)+Number(f.capexZwembad||0);
+  }
+
+  function loanMonthlyPayment(P, annualRatePct, years){
+    const r = (Number(annualRatePct||0)/100)/12;
+    const n = Math.max(1, Number(years||1)*12);
+    if(P<=0) return 0;
+    if(r<=0) return P/n;
+    return (P*r) / (1 - Math.pow(1+r, -n));
+  }
+
+  function zfrrPercent(){
+    if(state.tax.zfrrOk !== "yes") return 0;
+    const y = Number(state.tax.zfrrYear||9);
+    if(y<=5) return 1.0;
+    if(y===6) return 0.75;
+    if(y===7) return 0.50;
+    if(y===8) return 0.25;
+    return 0;
+  }
+
+  function microParams(){
+    return MICRO[state.context.activiteit] || null;
+  }
+
+  function adviseRegime(omzet, opexTotal){
+    // heuristic: compare micro basis vs real basis
+    const mp = microParams();
+    if(!mp) return { recommended:"micro", reason:"Geen micro-parameters bekend; default micro." };
+    const microBase = omzet * (1-mp.abatt);
+    const dep = (sumCapex() * (Number(state.tax.depPct||0)/100)); // annual
+    const realBase = Math.max(0, omzet - opexTotal - dep);
+    // If omzet > limit => micro not allowed (heuristic)
+    if(omzet > mp.limit) return { recommended:"reel", reason:`Micro lijkt boven de indicatieve omzetgrens (${fmtEUR(mp.limit)}).` };
+    // Choose lower taxable base
+    if(realBase < microBase) return { recommended:"reel", reason:"Régime réel geeft (met jouw kosteninput) een lagere belastbare basis." };
+    return { recommended:"micro", reason:"Micro-BIC geeft (met huidige aannames) een lagere of vergelijkbare belastbare basis en is administratief eenvoudiger." };
+  }
+
+  function taxCompute(){
+    const omzet = Number(state.tax.omzet||0);
+    const mp = microParams();
+    const opex = sumOpex();
+    const capex = sumCapex();
+    const dep = capex * (Number(state.tax.depPct||0)/100); // annual estimate
+    const zP = zfrrPercent();
+
+    const microAllowed = mp ? (omzet <= mp.limit) : true;
+    const microBase = mp ? Math.max(0, omzet * (1-mp.abatt)) : 0;
+
+    const realBaseRaw = Math.max(0, omzet - opex - dep);
+    const realBase = Math.max(0, realBaseRaw * (1 - zP));
+    const zExemptAmt = realBaseRaw * zP;
+
+    const advice = adviseRegime(omzet, opex);
+
+    let chosen = state.tax.regime;
+    if(chosen==="advise") chosen = advice.recommended;
+    if(chosen==="micro" && !microAllowed) chosen = "reel";
+
+    const chosenBase = chosen==="micro" ? microBase : realBase;
+
+    // Non-resident minimum tax scenario (range 20–30%).
+    const isNon = state.context.residentie==="non";
+    const minTaxLow = isNon ? chosenBase*0.20 : null;
+    const minTaxHigh = isNon ? chosenBase*0.30 : null;
+
+    return {
+      omzet, mp, opex, capex, dep,
+      microAllowed, microBase,
+      realBaseRaw, realBase,
+      zP, zExemptAmt,
+      advice, chosen, chosenBase,
+      minTaxLow, minTaxHigh
+    };
+  }
+
+  function marketingCompute(){
+    const m = state.marketing;
+    const ownUsePct = clamp(Number(state.project.eigenGebruik||0),0,100);
+    const blocked = clamp(Number(m.blockDays||0),0,365);
+    const availableDays = clamp(Math.round(365*(1-ownUsePct/100) - blocked),0,365);
+
+    const avgPrice = Math.max(0, Number(m.avgPrice||0));
+    const avgStay = Math.max(1, Number(m.avgStayNights||1));
+    const cleaning = Math.max(0, Number(m.cleaningPerStay||0));
+
+    const shares = [
+      {share:Number(m.shareAirbnb||0), fee:Number(m.feeAirbnb||0)},
+      {share:Number(m.shareBooking||0), fee:Number(m.feeBooking||0)},
+      {share:Number(m.shareDirect||0), fee:Number(m.feeDirect||0)}
+    ];
+    const sumShares = shares.reduce((a,x)=>a+x.share,0) || 0;
+    // Normalize if not 100
+    const norm = (sumShares>0) ? 100/sumShares : 0;
+    const weightedFeePct = sumShares>0 ? shares.reduce((a,x)=>a+(x.share*norm)*(x.fee/100),0) : 0;
+
+    function scenario(occPct){
+      const occ = clamp(Number(occPct||0),0,100)/100;
+      const nightsSold = Math.round(availableDays * occ);
+      const stays = Math.max(1, Math.round(nightsSold / avgStay));
+      const gross = nightsSold * avgPrice;
+      const cleaningRev = cleaning>0 ? stays*cleaning : 0;
+      const grossTotal = gross + cleaningRev;
+      const channelFees = grossTotal * weightedFeePct;
+      return { availableDays, nightsSold, stays, grossTotal, channelFees, netAfterFees: grossTotal - channelFees };
+    }
+
+    return {
+      availableDays,
+      sumShares,
+      weightedFeePct,
+      low: scenario(m.occLow),
+      mid: scenario(m.occMid),
+      high: scenario(m.occHigh)
+    };
+  }
+
+  // --- Render ---
+  function renderContextCard(){
+    const c = state.context;
+    const ok = hasTab1();
+    const box = $("contextCard");
+    if(!ok){
+      box.style.display="none";
+      return;
+    }
+    const actLabel = MICRO[c.activiteit]?.label || c.activiteit || "-";
+    const loc = (c.commune && c.insee) ? `${c.commune} (INSEE ${c.insee}, dep ${c.dep||"-"})` : "Nog niet gecontroleerd";
+    box.style.display="block";
+    box.innerHTML = `
+      <h3>Contextkaart</h3>
+      <div class="mini">
+        <b>Residentie:</b> ${c.residentie==="fr"?"FR-resident":"Niet-resident"}<br>
+        <b>Sociaal stelsel:</b> ${c.sociaal||"—"}<br>
+        <b>Activiteit:</b> ${actLabel}<br>
+        <b>Start:</b> ${c.start||"—"}<br>
+        <b>Locatie:</b> ${loc}<br>
+        <b>Groepsverhuur:</b> ${c.groep8==="yes"?"Ja":"Nee"}
+      </div>
+    `;
+  }
+
+  function renderStrategieCard(){
+    const ok = hasTab2();
+    const box = $("strategieCard");
+    if(!ok){ box.style.display="none"; return; }
+    const p = state.project;
+    const cues = [];
+    if(state.context.groep8==="yes" || Number(p.pax||0)>=8) cues.push("Groepsverhuur vraagt strakkere huisregels, schoonmaaklogistiek en hogere piek-vraag (weekenden/vakanties).");
+    if(p.zwembad==="yes") cues.push("Zwembad kan conversie in hoogseizoen verhogen, maar verhoogt CAPEX/OPEX en aansprakelijkheid/onderhoud.");
+    if(p.ev==="yes") cues.push("EV-laden is een modern onderscheidend punt (zeker bij jaarrond profiel).");
+    if(p.toeg==="yes") cues.push("Toegankelijkheid kan niche-vraag bedienen en reviews verbeteren, maar vraagt consistente communicatie.");
+    const msg = cues.length ? ("<ul>"+cues.map(x=>`<li>${x}</li>`).join("")+"</ul>") : "<div class='mini'>Geen specifieke flags; focus op scherpe positionering en betrouwbare basisvoorzieningen.</div>";
+    box.style.display="block";
+    box.innerHTML = `
+      <h3>Strategiekaart</h3>
+      <div class="mini">
+        <b>Capaciteit:</b> ${p.pax} pax, ${p.kamers} kamers, ${p.badkamers} badkamers<br>
+        <b>Profiel:</b> ${p.jaarrond}<br>
+        <b>Eigen gebruik:</b> ${clamp(Number(p.eigenGebruik||0),0,100)}%<br>
+      </div>
+      ${msg}
+      ${p.strategieNote ? `<div class="mini"><b>Notitie:</b> ${escapeHtml(p.strategieNote)}</div>` : ""}
+    `;
+  }
+
+  function renderOpex(){
+    const opex = sumOpex();
+    const omzet = Number(state.tax.omzet||0);
+    const ratio = omzet>0 ? (opex/omzet)*100 : 0;
+    $("opexSummary").innerHTML = `
+      <strong>OPEX totaal:</strong> ${fmtEUR(opex)}<br>
+      <span class="mini">Kostenratio op huidige omzet (Tab 4): <b>${ratio.toFixed(1)}%</b>. Vul minimaal de grote posten; anders wordt régime réel te rooskleurig of te somber.</span>
+    `;
+  }
+
+  function renderFinancing(){
+    const f = state.financials;
+    const P = Number(f.finLening||0);
+    const pay = loanMonthlyPayment(P, Number(f.finRente||0), Number(f.finJaren||1));
+    const year = pay*12;
+    $("finSummary").innerHTML = `
+      <strong>Scenario leninglast:</strong> ${fmtEUR(pay)} per maand (${fmtEUR(year)} per jaar).<br>
+      <span class="mini">Indicatief, excl. verzekeringen/fees. Doel: cashflow-gevoel, geen bankadvies.</span>
+    `;
+  }
+
+  function renderZFrrControls(){
+    const ok = state.tax.zfrrOk==="yes";
+    $("zfrrYear").disabled = !ok;
+    const note = $("zfrrNote");
+    if(!ok){
+      note.className="alert warn";
+      note.innerHTML = "<strong>Let op:</strong> ZFRR wordt in deze tool alleen toegepast als je het zelf hebt bevestigd via een officiële zoneringscheck.";
+    } else {
+      note.className="alert ok";
+      note.innerHTML = "<strong>ZFRR actief:</strong> vrijstellingspercentage wordt toegepast in régime réel (indicatief), volgens het gekozen exploitatiejaar.";
+    }
+  }
+
+  function renderTax(){
+    const t = taxCompute();
+    const c = state.context;
+    const mp = t.mp;
+
+    const qualityWarn = [];
+    if(!hasTab1()) qualityWarn.push("Tab 1 is onvolledig (residentie/activiteit/start).");
+    const oFilled = [state.financials.opexEnergie,state.financials.opexVerz,state.financials.opexSchoon,state.financials.opexOnderhoud,state.financials.opexCFE].filter(x=>Number(x||0)>0).length;
+    if(oFilled===0) qualityWarn.push("Tab 3: jaarlijkse kosten lijken leeg. Régime réel is dan niet betrouwbaar.");
+    if(!hasLocation()) qualityWarn.push("Locatie ontbreekt (gemeente/INSEE). Compliance-tab wordt generieker.");
+
+    const actLabel = mp ? mp.label : (c.activiteit||"—");
+    const microLine = mp ? `Abattement: ${(mp.abatt*100).toFixed(0)}% · Omzetgrens (indicatief): ${fmtEUR(mp.limit)}` : "Micro-parameters ontbreken.";
+
+    const adviceBox = `<div class="alert ${t.advice.recommended===t.chosen?'ok':'warn'}">
+      <strong>Regime-advies:</strong> ${t.advice.recommended==="micro"?"Micro-BIC":"Régime réel"}<br>
+      <span class="mini">${escapeHtml(t.advice.reason)}</span>
+    </div>`;
+
+    const microAllowedTxt = t.microAllowed ? "Micro lijkt toegestaan binnen grens (indicatief)." : "Micro lijkt boven de grens → régime réel nodig.";
+    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).` : "ZFRR niet toegepast.";
+
+    const nonResTxt = (c.residentie==="non")
+      ? `<div class="alert warn"><strong>Niet-resident scenario:</strong> minimumheffing wordt vaak als 20–30% bandbreedte gebruikt (afhankelijk van schijven/regels). In deze V1 tonen we daarom een range: <b>${fmtEUR(t.minTaxLow)} – ${fmtEUR(t.minTaxHigh)}</b>.</div>`
+      : "";
+
+    const baseTable = `
+      <table>
+        <thead><tr><th>Component</th><th class="r">Waarde</th></tr></thead>
+        <tbody>
+          <tr><td>Omzet</td><td class="r">${fmtEUR(t.omzet)}</td></tr>
+          <tr><td>OPEX (Tab 3)</td><td class="r">- ${fmtEUR(t.opex)}</td></tr>
+          <tr><td>Indicatieve afschrijving (Tab 4)</td><td class="r">- ${fmtEUR(t.dep)}</td></tr>
+          <tr><td><b>Régime réel basis vóór ZFRR</b></td><td class="r">${fmtEUR(t.realBaseRaw)}</td></tr>
+          <tr><td>ZFRR-vrijstelling</td><td class="r">- ${fmtEUR(t.zExemptAmt)}</td></tr>
+          <tr><td><b>Régime réel basis (na ZFRR)</b></td><td class="r">${fmtEUR(t.realBase)}</td></tr>
+          <tr><td>Micro-BIC basis</td><td class="r">${fmtEUR(t.microBase)}</td></tr>
+          <tr><td style="border-top:2px solid rgba(128,0,0,.25)"><b>Gekozen regime</b></td><td class="r" style="border-top:2px solid rgba(128,0,0,.25)">${t.chosen==="micro"?"Micro-BIC":"Régime réel"}</td></tr>
+          <tr><td><b>Belastbare basis (gekozen)</b></td><td class="r"><b>${fmtEUR(t.chosenBase)}</b></td></tr>
+        </tbody>
+      </table>
+    `;
+
+    let warnHtml = "";
+    if(t.mp && !t.microAllowed){
+      warnHtml += `<div class="alert danger"><strong>Overschrijding (indicatief):</strong> omzet boven micro-grens (${fmtEUR(t.mp.limit)}). Tool forceert régime réel.</div>`;
+    }
+    if(qualityWarn.length){
+      warnHtml += `<div class="alert warn"><strong>Datakwaliteit:</strong><ul>${qualityWarn.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`;
+    }
+
+    $("taxResult").innerHTML = `
+      <div class="mini"><b>Activiteit:</b> ${escapeHtml(actLabel)}<br>${escapeHtml(microLine)}<br><b>Micro status:</b> ${escapeHtml(microAllowedTxt)}<br><b>${escapeHtml(zTxt)}</b></div>
+      ${adviceBox}
+      ${warnHtml}
+      ${baseTable}
+      ${nonResTxt}
+    `;
+  }
+
+  function renderMarketing(){
+    const r = marketingCompute();
+    const m = state.marketing;
+
+    // shares sanity
+    const sumShares = Number(r.sumShares||0);
+    let mixMsg = "";
+    if(sumShares<=0){
+      mixMsg = "<strong>Let op:</strong> zet een kanalenmix (aandelen) > 0; anders kan de tool geen gewogen commissie berekenen.";
+      $("mixNote").className="alert danger";
+    } else {
+      const normalized = Math.round(sumShares);
+      const feePct = (r.weightedFeePct*100).toFixed(1);
+      mixMsg = `<strong>Kanalenmix:</strong> som aandelen = ${normalized}%. Gewogen commissie ≈ <b>${feePct}%</b> (genormaliseerd indien geen 100%).`;
+      $("mixNote").className="alert ok";
+    }
+    $("mixNote").innerHTML = mixMsg;
+
+    const tbl = (s)=>`
+      <tr>
+        <td>${s.label}</td>
+        <td class="r">${s.occ}%</td>
+        <td class="r">${s.nightsSold}</td>
+        <td class="r">${fmtEUR(s.grossTotal)}</td>
+        <td class="r">- ${fmtEUR(s.channelFees)}</td>
+        <td class="r"><b>${fmtEUR(s.netAfterFees)}</b></td>
+      </tr>
+    `;
+    const rows = [
+      {label:"Conservatief", occ: clamp(Number(m.occLow||0),0,100), ...r.low},
+      {label:"Realistisch", occ: clamp(Number(m.occMid||0),0,100), ...r.mid},
+      {label:"Optimistisch", occ: clamp(Number(m.occHigh||0),0,100), ...r.high},
+    ];
+
+    const noteFlags = [];
+    if(state.context.groep8==="yes" || Number(state.project.pax||0)>=8) noteFlags.push("Groepsverhuur: focus op weekendblokken, duidelijke huisregels, en hogere schoonmaak/linnenkosten per turnover.");
+    if(state.project.zwembad==="yes") noteFlags.push("Zwembad: verhoogt conversie in hoogseizoen, maar voeg expliciet CAPEX/OPEX toe (onderhoud/verzekering).");
+    if(state.project.jaarrond==="yearround") noteFlags.push("Jaarrond: direct boekbaarheidsbeleid + minimumverblijven per seizoen is cruciaal om gaten te beperken.");
+    const adv = noteFlags.length ? `<div class="alert warn"><strong>Marketing-aandachtspunten:</strong><ul>${noteFlags.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>` : "";
+
+    $("mktResult").innerHTML = `
+      ${adv}
+      <div class="mini">
+        <b>Beschikbare dagen:</b> ${r.availableDays} (na eigen gebruik en geblokkeerde dagen)<br>
+        <b>Prijs per nacht:</b> ${fmtEUR(Number(m.avgPrice||0))} · <b>Gem. verblijf:</b> ${Math.max(1,Number(m.avgStayNights||1))} nachten
+      </div>
+      <table style="margin-top:10px">
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th class="r">Bezetting</th>
+            <th class="r">Verkochte nachten</th>
+            <th class="r">Omzet</th>
+            <th class="r">Kanaalkosten</th>
+            <th class="r">Netto na fees</th>
+          </tr>
+        </thead>
+        <tbody>${rows.map(s=>tbl(s)).join("")}</tbody>
+      </table>
+      <div class="muted" style="margin-top:8px">
+        Opmerking: “Netto na fees” is vóór je overige OPEX (Tab 3). Dit is bewust: marketing is je omzetmotor; kosten bewaak je apart.
+      </div>
+    `;
+  }
+
+  function renderCompliance(){
+    const c = state.context;
+    const list = [];
+
+    // Basic admin
+    list.push("Kies en documenteer je regime (micro vs réel) en houd bewijs van kosten/investeringen bij.");
+    list.push("Controleer lokale regels bij de mairie (toeristische verhuur, eventuele registratie/voorwaarden per commune).");
+    list.push("Plan CFE: bedrag verschilt per commune/grondslag; zet dit als overschrijfbare post in Tab 3.");
+
+    // Activity-specific
+    if(c.activiteit==="cdh"){
+      list.push("Chambre d’hôtes: operationaliseer service (ontbijt, ontvangst, schoonmaakfrequentie) en maak dit expliciet in je aanbod.");
+    }
+    if(c.activiteit==="meuble_non" || c.activiteit==="meuble_classe"){
+      list.push("Meublé de tourisme: check verplichtingen rond registratie/nummer, maximale verhuurdagen (waar relevant) en platform-regels per gemeente.");
+    }
+    if(c.activiteit==="meuble_classe"){
+      list.push("Geclassificeerd: weeg classificatie-kosten/inspectie af tegen fiscale/marketing voordelen en doelgroep (kwaliteitssignaal).");
+    }
+
+    // Non-resident hints
+    if(c.residentie==="non"){
+      list.push("Niet-resident: maak onderscheid tussen Franse inkomsten en wereldinkomen (voor scenario-berekeningen) en leg je sociaal-stelselstatus vast.");
+    }
+
+    // Pool
+    if(state.project.zwembad==="yes"){
+      list.push("Zwembad: controleer onderhoudsverplichtingen/veiligheid, verzekeringsdekking en stel een onderhoudsbudget vast.");
+    }
+
+    const html = `<ul style="padding-left:20px">${list.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>`;
+    $("complianceList").innerHTML = html;
+
+    // Timeline
+    const t = [];
+    const start = c.start ? c.start+"-01" : null;
+    t.push({when:"Nu", what:"Vul Tab 1–5 in en exporteer een rapport voor je dossier (accountant/notaris/bank)."});
+    t.push({when:"Voor start exploitatie", what:"Mairie-check (lokale regels/registratie), kanaalkeuze, house rules, basiscontracten/verzekeringen."});
+    t.push({when:"Eerste 90 dagen", what:"Administratie opzetten: inkomsten/uitgaven, facturen, onderhoudslogboek, planning schoonmaak/linnen."});
+    t.push({when:"Eerste aangiftejaar", what:"Regime definitief vastleggen (micro of réel) en consistent bewijsbeheer voeren."});
+
+    if(start){
+      t.unshift({when:`Start (gegeven): ${c.start}`, what:"Check of alle aannames in Tab 3–4 nog kloppen (kosten, omzet, kanaalfees)."});
+    }
+
+    $("timeline").innerHTML = `<ul style="padding-left:20px">${t.map(x=>`<li><b>${escapeHtml(x.when)}:</b> ${escapeHtml(x.what)}</li>`).join("")}</ul>`;
+  }
+
+  function renderReport(){
+    const c = state.context, p = state.project, f = state.financials;
+    const tax = taxCompute();
+    const mkt = marketingCompute();
+    const opex = sumOpex();
+    const capex = sumCapex();
+    const loanM = loanMonthlyPayment(Number(f.finLening||0), Number(f.finRente||0), Number(f.finJaren||1));
+    const loanY = loanM*12;
+
+    $("reportMeta").textContent = `Datum: ${nowISO()} · Toolversie: ${VERSION}`;
+
+    const actLabel = MICRO[c.activiteit]?.label || (c.activiteit||"—");
+    const loc = (c.commune && c.insee) ? `${c.commune} (INSEE ${c.insee}, dep ${c.dep||"-"})` : "—";
+
+    $("reportKV").innerHTML = `
+      <div><b>Profiel</b>${c.residentie==="fr"?"FR-resident":"Niet-resident"} · ${escapeHtml(c.sociaal||"—")}</div>
+      <div><b>Activiteit</b>${escapeHtml(actLabel)} · Start: ${escapeHtml(c.start||"—")}</div>
+      <div><b>Locatie</b>${escapeHtml(loc)}</div>
+      <div><b>Capaciteit</b>${Number(p.pax||0)} pax · ${Number(p.kamers||0)} kamers · ${Number(p.badkamers||0)} badkamers</div>
+      <div><b>Kenmerken</b>Zwembad: ${p.zwembad==="yes"?"Ja":"Nee"} · Groep≥8: ${c.groep8==="yes"?"Ja":"Nee"} · EV: ${p.ev==="yes"?"Ja":"Nee"}</div>
+      <div><b>Gebruik</b>Eigen gebruik: ${clamp(Number(p.eigenGebruik||0),0,100)}% · Profiel: ${escapeHtml(p.jaarrond||"—")}</div>
+    `;
+
+    // KPIs
+    const k1 = fmtEUR(tax.omzet);
+    const k2 = fmtEUR(tax.chosenBase);
+    const k3 = `${fmtEUR(opex)} OPEX · ${fmtEUR(capex)} CAPEX`;
+    $("reportKPIs").innerHTML = `
+      <div class="kv">
+        <div><b>Omzet (jaar)</b>${k1}</div>
+        <div><b>Belastbare basis (gekozen)</b>${k2}</div>
+        <div><b>Kosten & investeringen</b>${k3}</div>
+        <div><b>Leninglast (scenario)</b>${fmtEUR(loanM)} / maand (${fmtEUR(loanY)} / jaar)</div>
+      </div>
+    `;
+
+    // Assumptions / quality
+    const qs = qualityScore();
+    const miss = [];
+    if(!hasTab1()) miss.push("Context (Tab 1) onvolledig.");
+    if(!hasLocation()) miss.push("Locatie (gemeente/INSEE) ontbreekt.");
+    const oFilled = [f.opexEnergie,f.opexVerz,f.opexSchoon,f.opexOnderhoud,f.opexCFE].filter(x=>Number(x||0)>0).length;
+    if(oFilled===0) miss.push("Kosten (Tab 3) lijken leeg; régime réel scenario wordt onbetrouwbaar.");
+    const ass = `
+      <div class="alert ${qs>=70?'ok':(qs>=40?'warn':'danger')}">
+        <strong>Datakwaliteit:</strong> ${qs}/100
+        ${miss.length ? "<ul>"+miss.map(x=>`<li>${escapeHtml(x)}</li>`).join("")+"</ul>" : "<div class='mini'>Geen kritieke gaten gedetecteerd (maar blijf aannames controleren).</div>"}
+      </div>
+    `;
+    $("reportAssumptions").innerHTML = ass;
+
+    // Financials
+    $("reportFin").innerHTML = `
+      <table>
+        <thead><tr><th>Post</th><th class="r">Bedrag</th></tr></thead>
+        <tbody>
+          <tr><td>CAPEX totaal</td><td class="r">${fmtEUR(capex)}</td></tr>
+          <tr><td>OPEX totaal (jaarlijks)</td><td class="r">${fmtEUR(opex)}</td></tr>
+          <tr><td>Leninglast (jaarlijks, scenario)</td><td class="r">${fmtEUR(loanY)}</td></tr>
+        </tbody>
+      </table>
+      ${p.strategieNote ? `<div class="mini" style="margin-top:8px"><b>Projectnotitie:</b> ${escapeHtml(p.strategieNote)}</div>` : ""}
+    `;
+
+    // Tax
+    const microLine = tax.mp ? `Micro: abattement ${(tax.mp.abatt*100).toFixed(0)}% · grens ${fmtEUR(tax.mp.limit)}` : "Micro parameters: —";
+    const zLine = tax.zP>0 ? `ZFRR toegepast: ${(tax.zP*100).toFixed(0)}% vrijstelling (bedrag ${fmtEUR(tax.zExemptAmt)} op real-basis vóór vrijstelling).` : "ZFRR: niet toegepast.";
+    $("reportTax").innerHTML = `
+      <div class="mini">
+        <b>Regime-advies:</b> ${tax.advice.recommended==="micro"?"Micro-BIC":"Régime réel"} · <span class="muted">${escapeHtml(tax.advice.reason)}</span><br>
+        <b>Gekozen regime:</b> ${tax.chosen==="micro"?"Micro-BIC":"Régime réel"}<br>
+        ${escapeHtml(microLine)}<br>
+        ${escapeHtml(zLine)}
+      </div>
+      <table style="margin-top:10px">
+        <thead><tr><th>Basis</th><th class="r">Bedrag</th></tr></thead>
+        <tbody>
+          <tr><td>Micro-BIC belastbare basis</td><td class="r">${fmtEUR(tax.microBase)}</td></tr>
+          <tr><td>Régime réel basis vóór ZFRR</td><td class="r">${fmtEUR(tax.realBaseRaw)}</td></tr>
+          <tr><td>Régime réel basis na ZFRR</td><td class="r">${fmtEUR(tax.realBase)}</td></tr>
+          <tr><td><b>Belastbare basis (gekozen)</b></td><td class="r"><b>${fmtEUR(tax.chosenBase)}</b></td></tr>
+        </tbody>
+      </table>
+      ${(c.residentie==="non") ? `<div class="mini" style="margin-top:8px"><b>Niet-resident bandbreedte:</b> minimumheffing scenario 20–30% → ${fmtEUR(tax.minTaxLow)} – ${fmtEUR(tax.minTaxHigh)}.</div>` : ""}
+    `;
+
+    // Marketing
+    const mkRows = [
+      {n:"Conservatief", ...mkt.low},
+      {n:"Realistisch", ...mkt.mid},
+      {n:"Optimistisch", ...mkt.high},
+    ];
+    $("reportMkt").innerHTML = `
+      <div class="mini">
+        <b>Beschikbare dagen:</b> ${mkt.availableDays} · <b>Gewogen kanaalfee:</b> ${(mkt.weightedFeePct*100).toFixed(1)}% · <b>Prijs/nacht:</b> ${fmtEUR(Number(state.marketing.avgPrice||0))}
+      </div>
+      <table style="margin-top:10px">
+        <thead><tr><th>Scenario</th><th class="r">Omzet</th><th class="r">Kanaalkosten</th><th class="r">Netto na fees</th></tr></thead>
+        <tbody>
+          ${mkRows.map(r=>`
+            <tr>
+              <td>${r.n}</td>
+              <td class="r">${fmtEUR(r.grossTotal)}</td>
+              <td class="r">- ${fmtEUR(r.channelFees)}</td>
+              <td class="r"><b>${fmtEUR(r.netAfterFees)}</b></td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    `;
+
+    // Compliance & timeline (reuse rendered HTML)
+    $("reportComp").innerHTML = `
+      <div class="mini"><b>Checklist:</b></div>
+      ${$("complianceList").innerHTML}
+      <div class="mini" style="margin-top:10px"><b>Tijdlijn:</b></div>
+      ${$("timeline").innerHTML}
+    `;
+  }
+
+  function renderSide(){
+    const c = state.context, p = state.project, f = state.financials, t = state.tax;
+    const items = [];
+
+    if(!hasTab1()) items.push({k:"Tab 1", v:"Onvolledig", cls:"warn"});
+    else items.push({k:"Tab 1", v:"OK", cls:"ok"});
+
+    if(!hasLocation()) items.push({k:"Locatie", v:"Nog niet bevestigd", cls:"warn"});
+    else items.push({k:"Locatie", v:`${c.commune} (${c.insee})`, cls:"ok"});
+
+    const o = [f.opexEnergie,f.opexInternet,f.opexVerz,f.opexSchoon,f.opexOnderhoud,f.opexAdmin,f.opexCFE,f.opexOverig].filter(x=>Number(x||0)>0).length;
+    items.push({k:"Kosten (Tab 3)", v: o>=3 ? "Voldoende ingevuld" : (o>=1 ? "Beperkt ingevuld" : "Leeg"), cls: o>=3?"ok":"warn"});
+
+    items.push({k:"Omzet (Tab 4)", v: Number(t.omzet||0)>0 ? fmtEUR(Number(t.omzet||0)) : "Leeg", cls: Number(t.omzet||0)>0?"ok":"warn"});
+
+    const q = qualityScore();
+    $("qualityLabel").textContent = `${q}/100`;
+
+    $("sideStatus").innerHTML = `
+      <h3>Datacontrole</h3>
+      ${items.map(x=>`<div class="alert ${x.cls}" style="margin:10px 0"><strong>${escapeHtml(x.k)}:</strong> ${escapeHtml(x.v)}</div>`).join("")}
+      <div class="mini muted">Tip: als je start in Tab 4/5, vul later Tab 1–3 aan en exporteer opnieuw.</div>
+    `;
+  }
+
+  function renderAll(){
+    // persist
+    save();
+
+    // sync DOM values (only for fields affected by load)
+    syncInputsFromState();
+
+    updateTabBadges();
+    renderContextCard();
+    renderStrategieCard();
+    renderOpex();
+    renderFinancing();
+    renderZFrrControls();
+    renderTax();
+    renderMarketing();
+    renderCompliance();
+    renderReport();
+    renderSide();
+  }
+
+  function syncInputsFromState(){
+    // Tab1
+    if($("residentie").value !== state.context.residentie) $("residentie").value = state.context.residentie;
+    if($("sociaal").value !== state.context.sociaal) $("sociaal").value = state.context.sociaal;
+    if($("activiteit").value !== state.context.activiteit) $("activiteit").value = state.context.activiteit;
+    if($("start").value !== state.context.start) $("start").value = state.context.start;
+    if($("groep8").value !== state.context.groep8) $("groep8").value = state.context.groep8;
+    if($("adres").value !== (state.context.adres||"")) $("adres").value = state.context.adres||"";
+
+    // Tab2
+    setNum("pax", state.project.pax);
+    setNum("kamers", state.project.kamers);
+    setNum("badkamers", state.project.badkamers);
+    if($("jaarrond").value !== state.project.jaarrond) $("jaarrond").value = state.project.jaarrond;
+    setNum("eigenGebruik", state.project.eigenGebruik);
+    if($("zwembad").value !== state.project.zwembad) $("zwembad").value = state.project.zwembad;
+    if($("ev").value !== state.project.ev) $("ev").value = state.project.ev;
+    if($("toeg").value !== state.project.toeg) $("toeg").value = state.project.toeg;
+    if($("huisdieren").value !== state.project.huisdieren) $("huisdieren").value = state.project.huisdieren;
+    if($("strategieNote").value !== state.project.strategieNote) $("strategieNote").value = state.project.strategieNote;
+
+    // Tab3
+    ["capexRenov","capexMeubilair","capexApp","capexZwembad",
+     "opexEnergie","opexInternet","opexVerz","opexSchoon","opexOnderhoud","opexAdmin","opexCFE","opexOverig",
+     "finEigen","finLening","finRente","finJaren"
+    ].forEach(id=>setNum(id, state.financials[id]));
+
+    // Tab4
+    setNum("omzet", state.tax.omzet);
+    if($("regime").value !== state.tax.regime) $("regime").value = state.tax.regime;
+    if($("zfrrOk").value !== state.tax.zfrrOk) $("zfrrOk").value = state.tax.zfrrOk;
+    if(String($("zfrrYear").value) !== String(state.tax.zfrrYear)) $("zfrrYear").value = String(state.tax.zfrrYear);
+    setNum("depPct", state.tax.depPct);
+    setNum("worldIncome", state.tax.worldIncome);
+
+    // Tab5
+    ["shareAirbnb","feeAirbnb","shareBooking","feeBooking","shareDirect","feeDirect",
+     "avgPrice","cleaningPerStay","occLow","occMid","occHigh","avgStayNights","blockDays"
+    ].forEach(id=>setNum(id, state.marketing[id]));
+  }
+
+  function setNum(id, val){
+    const el = $(id);
+    const v = (val===null || val===undefined) ? "" : String(val);
+    if(el.value !== v) el.value = v;
+  }
+
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+  }
+
+  // --- Init ---
+  load();
+  setTab("t1");
+  renderAll();
+
+})();
+</script>
+</body>
+</html>
