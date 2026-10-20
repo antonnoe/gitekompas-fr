@@ -1,5 +1,6 @@
 {
   "stand": "2026-10-20",
+  "registerversie": "1.4.0",
   "toelichting": "Kopie van de waarden uit Peil, het parameterregister van Communities Abroad. Wordt bijgewerkt door de Peil-agent; tests/peil.test.mjs vergelijkt peil-config.js hiermee.",
   "parameters": [
     {
@@ -55,11 +56,11 @@
     {
       "id": "p.fr.gite.degressieve_reeks",
       "naam": "Degressieve reeks per bezitsjaar in GîteKompas",
+      "status": "te_verifieren",
       "waarde": null,
       "waarde_weergave": null,
       "bron_url": null,
-      "verificatiedatum": null,
-      "status": "te_verifieren"
+      "verificatiedatum": null
     }
   ]
 }
