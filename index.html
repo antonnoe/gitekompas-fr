@@ -158,8 +158,9 @@
       gap:0;
     }
     @media (max-width: 980px){
-      .content{grid-template-columns:1fr}
+      .content{grid-template-columns:minmax(0,1fr)}
     }
+    .content > *{min-width:0}
     .main{
       padding:22px 18px 30px;
       border-right:1px solid var(--line);
@@ -277,6 +278,7 @@
     }
     td.r{text-align:right; font-weight:800; font-family:Poppins, system-ui, sans-serif}
     tr:last-child td{border-bottom:0}
+    @media (max-width:720px){ th, td{padding:8px 6px; font-size:.9rem; overflow-wrap:anywhere} td.r{font-size:.85rem} }
 
     /* Report */
     .report-wrap{
@@ -323,6 +325,26 @@
     }
     .kv b{display:block; color:var(--maroon); font-family:Poppins, system-ui, sans-serif}
     .footnote{font-size:.9rem; color:#444}
+
+    /* Peil-label: stempel bij de uitkomst en voettekstalinea. Alleen zichtbaar als PEIL_LABEL_AAN in peil-config.js true is. */
+    .peil-stempel:focus-visible, .peil-alinea a:focus-visible{outline:2px solid var(--maroon); outline-offset:3px; border-radius:4px}
+    .peil-stempel-rij{display:flex; justify-content:flex-end; margin-top:12px}
+    .peil-stempel{display:inline-flex; align-items:center; gap:9px; min-height:44px; padding:4px 12px 4px 4px; border:1px solid #eadede; border-radius:999px; background:#fff; color:#800000; text-decoration:none; transition:border-color .15s, background .15s}
+    .peil-stempel svg{flex:none; width:36px; height:36px; display:block; opacity:.85; filter:drop-shadow(0 1px 0 rgba(255,255,255,.9)) drop-shadow(0 -1px 0 rgba(128,0,0,.12))}
+    .peil-stempel__tk{display:flex; flex-direction:column; line-height:1.25}
+    .peil-stempel__t1{font-size:13px; font-weight:700; color:#7a1f1f}
+    .peil-stempel__t2{font-size:12px; color:#6a5d58}
+    .peil-stempel:hover{border-color:#cfa9a9; background:#fcf7f7}
+    .peil-pijl{display:inline-block; margin-left:.25em; font-size:12px; line-height:1; color:inherit; transition:transform .15s}
+    @media (prefers-reduced-motion: no-preference){ .peil-stempel:hover .peil-pijl{transform:translate(2px,-2px)} }
+    .peil-stempel:hover .peil-stempel__t1{text-decoration:underline; text-underline-offset:2px}
+    .peil-merk{flex:none; display:inline-block; width:18px; height:18px; border-radius:50%; background:#800000; color:#fff; font:700 12px/18px system-ui, sans-serif; text-align:center; text-decoration:none}
+    .peil-alinea{position:relative; margin:0; padding:14px 16px 14px 42px; max-width:72ch; font-size:13px; line-height:1.6em; color:var(--muted)}
+    .peil-alinea[hidden]{display:none}
+    .peil-alinea .peil-merk{position:absolute; left:16px; top:17px}
+    .peil-alinea strong{color:var(--text)}
+    .peil-alinea a{display:inline-block; padding:6px 0; color:var(--maroon); text-decoration:underline; text-underline-offset:3px}
+    @media print{ .peil-stempel{border-color:#999} }
 
     /* Print */
     @media print{
@@ -825,6 +847,7 @@
               <b>Disclaimer:</b> Dit instrument is een beslis- en planningshulp. Uitkomsten zijn indicatief en hangen af van wetgeving, lokale regels en jouw exacte situatie.
               Voor bindende conclusies: laat je dossier toetsen door een Franse accountant/notaris.
             </div>
+            <div id="reportPeil"></div>
           </div>
         </div>
       </section>
@@ -845,10 +868,13 @@
         </div>
       </aside>
     </div>
+    <p class="peil-alinea no-print" id="peilVoet" hidden></p>
   </div>
 
+<script src="peil-config.js"></script>
 <script>
 (function(){
+  const GK = window.GK_CONFIG;
   const VERSION = "V1";
   const fmtEUR = (n) => {
     const x = Number.isFinite(n) ? n : 0;
@@ -858,14 +884,8 @@
   const nowISO = ()=>new Date().toISOString().slice(0,10);
 
   // --- Config (V1) ---
-  // Micro-BIC parameters (indicatief; set per jaargang in één plek).
-  // V1 gebruikt: non classé 30% / 15k; classé 50% / 77.7k; chambre d’hôtes in V1 gelijk aan classé.
-  const MICRO = {
-    meuble_non:  { abatt: 0.30, limit: 15000, label:"Meublé non classé" },
-    meuble_classe:{ abatt: 0.50, limit: 77700, label:"Meublé classé" },
-    cdh:         { abatt: 0.50, limit: 77700, label:"Chambre d’hôtes" },
-    own_home:    { abatt: 0.30, limit: 15000, label:"Verhuur eigen woning (indicatief)" }
-  };
+  // Micro-BIC, minimumheffing, ZFRR-afbouw en het Peil-label staan in peil-config.js (met bron en datum).
+  const MICRO = GK.MICRO;
 
   // --- State ---
   const state = {
@@ -1173,11 +1193,11 @@
   function zfrrPercent(){
     if(state.tax.zfrrOk !== "yes") return 0;
     const y = Number(state.tax.zfrrYear||9);
-    if(y<=5) return 1.0;
-    if(y===6) return 0.75;
-    if(y===7) return 0.50;
-    if(y===8) return 0.25;
-    return 0;
+    if(y<=5) return GK.ZFRR_REEKS.jaar1tm5;
+    if(y===6) return GK.ZFRR_REEKS.jaar6;
+    if(y===7) return GK.ZFRR_REEKS.jaar7;
+    if(y===8) return GK.ZFRR_REEKS.jaar8;
+    return GK.ZFRR_REEKS.daarna;
   }
 
   function microParams(){
@@ -1223,8 +1243,8 @@
 
     // Non-resident minimum tax scenario (range 20–30%).
     const isNon = state.context.residentie==="non";
-    const minTaxLow = isNon ? chosenBase*0.20 : null;
-    const minTaxHigh = isNon ? chosenBase*0.30 : null;
+    const minTaxLow = isNon ? chosenBase*GK.MINHEFFING.laag : null;
+    const minTaxHigh = isNon ? chosenBase*GK.MINHEFFING.hoog : null;
 
     return {
       omzet, mp, opex, capex, dep,
@@ -1356,7 +1376,7 @@
       note.innerHTML = "<strong>Let op:</strong> ZFRR wordt in deze tool alleen toegepast als je het zelf hebt bevestigd via een officiële zoneringscheck.";
     } else {
       note.className="alert ok";
-      note.innerHTML = "<strong>ZFRR actief:</strong> vrijstellingspercentage wordt toegepast in régime réel (indicatief), volgens het gekozen exploitatiejaar.";
+      note.innerHTML = "<strong>ZFRR actief:</strong> vrijstellingspercentage wordt toegepast in régime réel (indicatief), volgens het gekozen exploitatiejaar. De afbouw na jaar 5 (75, 50 en 25 procent) is een aanname van deze tool en nog niet bij de bron geverifieerd.";
     }
   }
 
@@ -1372,7 +1392,7 @@
     if(!hasLocation()) qualityWarn.push("Locatie ontbreekt (gemeente/INSEE). Compliance-tab wordt generieker.");
 
     const actLabel = mp ? mp.label : (c.activiteit||"—");
-    const microLine = mp ? `Abattement: ${(mp.abatt*100).toFixed(0)}% · Omzetgrens (indicatief): ${fmtEUR(mp.limit)}` : "Micro-parameters ontbreken.";
+    const microLine = mp ? `Abattement: ${(mp.abatt*100).toFixed(0)}% · Omzetgrens (indicatief): ${fmtEUR(mp.limit)} (${GK.MICRO_JAAR})${mp.aanname ? ". Aanname: verhuur van de eigen woning rekent met het tarief voor een niet-geclassificeerd meublé" : ""}` : "Micro-parameters ontbreken.";
 
     const adviceBox = `<div class="alert ${t.advice.recommended===t.chosen?'ok':'warn'}">
       <strong>Regime-advies:</strong> ${t.advice.recommended==="micro"?"Micro-BIC":"Régime réel"}<br>
@@ -1380,7 +1400,7 @@
     </div>`;
 
     const microAllowedTxt = t.microAllowed ? "Micro lijkt toegestaan binnen grens (indicatief)." : "Micro lijkt boven de grens → régime réel nodig.";
-    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).` : "ZFRR niet toegepast.";
+    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).${(t.zP>0 && t.zP<1) ? " Aanname: de afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd." : ""}` : "ZFRR niet toegepast.";
 
     const nonResTxt = (c.residentie==="non")
       ? `<div class="alert warn"><strong>Niet-resident scenario:</strong> minimumheffing wordt vaak als 20–30% bandbreedte gebruikt (afhankelijk van schijven/regels). In deze V1 tonen we daarom een range: <b>${fmtEUR(t.minTaxLow)} – ${fmtEUR(t.minTaxHigh)}</b>.</div>`
@@ -1598,8 +1618,8 @@
     `;
 
     // Tax
-    const microLine = tax.mp ? `Micro: abattement ${(tax.mp.abatt*100).toFixed(0)}% · grens ${fmtEUR(tax.mp.limit)}` : "Micro parameters: —";
-    const zLine = tax.zP>0 ? `ZFRR toegepast: ${(tax.zP*100).toFixed(0)}% vrijstelling (bedrag ${fmtEUR(tax.zExemptAmt)} op real-basis vóór vrijstelling).` : "ZFRR: niet toegepast.";
+    const microLine = tax.mp ? `Micro: abattement ${(tax.mp.abatt*100).toFixed(0)}% · grens ${fmtEUR(tax.mp.limit)} (${GK.MICRO_JAAR})${tax.mp.aanname ? ". Aanname: verhuur van de eigen woning rekent met het tarief voor een niet-geclassificeerd meublé" : ""}` : "Micro parameters: —";
+    const zLine = tax.zP>0 ? `ZFRR toegepast: ${(tax.zP*100).toFixed(0)}% vrijstelling (bedrag ${fmtEUR(tax.zExemptAmt)} op real-basis vóór vrijstelling).${(tax.zP>0 && tax.zP<1) ? " Aanname: de afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd." : ""}` : "ZFRR: niet toegepast.";
     $("reportTax").innerHTML = `
       <div class="mini">
         <b>Regime-advies:</b> ${tax.advice.recommended==="micro"?"Micro-BIC":"Régime réel"} · <span class="muted">${escapeHtml(tax.advice.reason)}</span><br>
@@ -1642,6 +1662,12 @@
         </tbody>
       </table>
     `;
+
+    // Peil-stempel direct onder de disclaimer, voettekstalinea onderaan
+    $("reportPeil").innerHTML = GK.peilRegelHtml();
+    const voet = $("peilVoet");
+    voet.innerHTML = GK.peilVoetHtml();
+    voet.hidden = !GK.PEIL_LABEL_AAN;
 
     // Compliance & timeline (reuse rendered HTML)
     $("reportComp").innerHTML = `

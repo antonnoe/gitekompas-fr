@@ -1,0 +1,65 @@
+{
+  "stand": "2026-10-20",
+  "toelichting": "Kopie van de waarden uit Peil, het parameterregister van Communities Abroad. Wordt bijgewerkt door de Peil-agent; tests/peil.test.mjs vergelijkt peil-config.js hiermee.",
+  "parameters": [
+    {
+      "id": "p.fr.micro.bic_verhuur",
+      "naam": "Micro-BIC verhuur: plafond en abattement per type",
+      "waarde": {
+        "inkomsten_2025": {
+          "meuble_tourisme_non_classe": {
+            "plafond": 15000,
+            "abattement": 0.3
+          },
+          "meuble_tourisme_classe_en_chambres_hotes": {
+            "plafond": 77700,
+            "abattement": 0.5
+          },
+          "overige_gemeubileerde_verhuur": {
+            "plafond": 77700,
+            "abattement": 0.5
+          }
+        },
+        "inkomsten_2026": {
+          "meuble_tourisme_non_classe": {
+            "plafond": 15000,
+            "abattement": 0.3
+          },
+          "meuble_tourisme_classe_en_chambres_hotes": {
+            "plafond": 83600,
+            "abattement": 0.5
+          },
+          "overige_gemeubileerde_verhuur": {
+            "plafond": 83600,
+            "abattement": 0.5
+          }
+        }
+      },
+      "waarde_weergave": "Inkomsten 2025: 15.000 euro bij 30 procent (non classé), 77.700 euro bij 50 procent (overig); inkomsten 2026: plafond overig 83.600 euro",
+      "bron_url": "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_integral/Brochure-IR-2026.pdf",
+      "verificatiedatum": "2026-10-19"
+    },
+    {
+      "id": "p.fr.gite.minimumheffing_niet_residenten",
+      "naam": "Minimumheffing niet-residenten, bandbreedte",
+      "waarde": {
+        "tarief_tot_grens": 0.2,
+        "tarief_boven_grens": 0.3,
+        "grens": 29579,
+        "grens_herkomst": "bovengrens van de tweede schijf van art. 197 I 1 (inkomsten 2025)"
+      },
+      "waarde_weergave": "20 % tot 29.579 euro netto belastbaar inkomen, 30 % daarboven (inkomsten 2025)",
+      "bron_url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037985917",
+      "verificatiedatum": "2026-10-19"
+    },
+    {
+      "id": "p.fr.gite.degressieve_reeks",
+      "naam": "Degressieve reeks per bezitsjaar in GîteKompas",
+      "waarde": null,
+      "waarde_weergave": null,
+      "bron_url": null,
+      "verificatiedatum": null,
+      "status": "te_verifieren"
+    }
+  ]
+}

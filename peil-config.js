@@ -1,0 +1,56 @@
+/* GîteKompas FR: vaste waarden en Peil-label op één plek.
+   De waarden komen uit Peil, het parameterregister van Communities Abroad (privé); peil/waarden.json is de kopie en tests/peil.test.mjs bewaakt dat dit bestand ermee overeenkomt.
+   Bij elke controle alleen PEIL_STAND aanpassen (en peil/waarden.json). */
+(function (g) {
+  "use strict";
+
+  // Micro-BIC (art. 50-0 CGI), inkomsten 2026. Bron: Brochure pratique IR 2026 en fiche F23267 (Peil: p.fr.micro.bic_verhuur, gecontroleerd 19 oktober 2026).
+  // Voor inkomsten 2025 gold voor geclassificeerde meublés en chambres d'hôtes een plafond van 77.700 euro (zelfde abattement); het niet-geclassificeerde plafond is 15.000 euro bij 30 procent.
+  const MICRO = {
+    meuble_non:    { abatt: 0.30, limit: 15000, label: "Meublé non classé" },
+    meuble_classe: { abatt: 0.50, limit: 83600, label: "Meublé classé" },
+    cdh:           { abatt: 0.50, limit: 83600, label: "Chambre d’hôtes" },
+    // Aanname van de tool: verhuur van de eigen woning aan toeristen wordt als niet-geclassificeerd meublé gerekend. Peil kent deze categorie niet apart.
+    own_home:      { abatt: 0.30, limit: 15000, label: "Verhuur eigen woning (indicatief)", aanname: true }
+  };
+  const MICRO_JAAR = "inkomsten 2026";
+
+  // Minimumheffing niet-residenten (art. 197 A CGI): de tool toont een bandbreedte van 20 tot 30 procent (Peil: p.fr.gite.minimumheffing_niet_residenten).
+  const MINHEFFING = { laag: 0.20, hoog: 0.30 };
+
+  // Afbouw van de ZFRR-vrijstelling per exploitatiejaar. De percentages 75, 50 en 25 zijn een aanname van de tool: Peil heeft ze nog niet bij de bron geverifieerd (Peil: p.fr.gite.degressieve_reeks, status te verifiëren).
+  const ZFRR_REEKS = { jaar1tm5: 1.0, jaar6: 0.75, jaar7: 0.50, jaar8: 0.25, daarna: 0 };
+
+  // Peil-label. Zolang PEIL_LABEL_AAN false is, toont de tool niets over Peil.
+  const PEIL_STAND = "2026-10-20";
+  const PEIL_LABEL_AAN = true;
+  const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
+  const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+  const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+  const escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
+  function peilStandNl() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
+    return m ? `${parseInt(m[3], 10)} ${MAANDEN_NL[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
+  }
+  function peilStandKort() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(PEIL_STAND);
+    return m ? `${parseInt(m[3], 10)} ${MAANDEN_KORT[parseInt(m[2], 10) - 1]} ${m[1]}` : PEIL_STAND;
+  }
+  const PEIL_MERK = `<span class="peil-merk" aria-hidden="true">&#10003;</span>`;
+  // Compacte stempelknop: merkteken met dubbele ring en vinkje, twee korte regels, het geheel is één link naar het manifest.
+  function peilRegelHtml() {
+    if (!PEIL_LABEL_AAN) return "";
+    const aria = `Bedragen gecontroleerd tegen Peil, stand ${peilStandNl()}, lees hoe wij werken`;
+    return `<div class="peil-stempel-rij"><a class="peil-stempel" href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener" aria-label="${escapeHtml(aria)}"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="18.5" fill="#fff" stroke="#800000" stroke-width="1.6"/><circle cx="20" cy="20" r="14.5" fill="none" stroke="#800000" stroke-width="1"/><path d="M13.5 20.5 L18 25 L26.5 15.5" fill="none" stroke="#800000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="peil-stempel__tk" aria-hidden="true"><span class="peil-stempel__t1">Gecontroleerd tegen Peil</span><span class="peil-stempel__t2">stand ${escapeHtml(peilStandKort())}<span class="peil-pijl" aria-hidden="true">&#8599;</span></span></span></a></div>`;
+  }
+  function peilRegelMd() {
+    if (!PEIL_LABEL_AAN) return "";
+    return `[Bedragen gecontroleerd tegen Peil, stand ${peilStandNl()}](${PEIL_UITLEG_URL})`;
+  }
+  function peilVoetHtml() {
+    if (!PEIL_LABEL_AAN) return "";
+    return `${PEIL_MERK}<strong>Over de bedragen in deze tool.</strong> Alle wettelijke tarieven, bedragen en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk daarvan is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. Waar de tool met een aanname of schatting rekent, staat dat bij de uitkomst. <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`;
+  }
+
+  g.GK_CONFIG = { MICRO, MICRO_JAAR, MINHEFFING, ZFRR_REEKS, PEIL_STAND, PEIL_LABEL_AAN, PEIL_UITLEG_URL, peilStandNl, peilStandKort, peilRegelHtml, peilRegelMd, peilVoetHtml };
+})(typeof window !== "undefined" ? window : globalThis);
