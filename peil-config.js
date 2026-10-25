@@ -25,6 +25,8 @@
   const PEIL_STAND = "2026-10-20";
   const PEIL_LABEL_AAN = true;
   const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
+  // Toolkaart van deze tool; de Peil-stempel linkt hiernaartoe (het manifest blijft de link in de voettekstalinea).
+  const PEIL_KAART_URL = "https://communitiesabroad.com/manifest/tool/gitekompas-fr";
   const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
   const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
   const escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
@@ -40,8 +42,8 @@
   // Compacte stempelknop: merkteken met dubbele ring en vinkje, twee korte regels, het geheel is één link naar het manifest.
   function peilRegelHtml() {
     if (!PEIL_LABEL_AAN) return "";
-    const aria = `Bedragen gecontroleerd tegen Peil, stand ${peilStandNl()}, lees hoe wij werken`;
-    return `<div class="peil-stempel-rij"><a class="peil-stempel" href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener" aria-label="${escapeHtml(aria)}"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="18.5" fill="#fff" stroke="#800000" stroke-width="1.6"/><circle cx="20" cy="20" r="14.5" fill="none" stroke="#800000" stroke-width="1"/><path d="M13.5 20.5 L18 25 L26.5 15.5" fill="none" stroke="#800000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="peil-stempel__tk" aria-hidden="true"><span class="peil-stempel__t1">Gecontroleerd tegen Peil</span><span class="peil-stempel__t2">stand ${escapeHtml(peilStandKort())}<span class="peil-pijl" aria-hidden="true">&#8599;</span></span></span></a></div>`;
+    const aria = `Bedragen gecontroleerd tegen Peil, stand ${peilStandNl()}, bekijk wat er gecontroleerd is`;
+    return `<div class="peil-stempel-rij"><a class="peil-stempel" href="${PEIL_KAART_URL}" target="_blank" rel="noopener" aria-label="${escapeHtml(aria)}"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="18.5" fill="#fff" stroke="#800000" stroke-width="1.6"/><circle cx="20" cy="20" r="14.5" fill="none" stroke="#800000" stroke-width="1"/><path d="M13.5 20.5 L18 25 L26.5 15.5" fill="none" stroke="#800000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="peil-stempel__tk" aria-hidden="true"><span class="peil-stempel__t1">Gecontroleerd tegen Peil</span><span class="peil-stempel__t2">stand ${escapeHtml(peilStandKort())}<span class="peil-pijl" aria-hidden="true">&#8599;</span></span></span></a></div>`;
   }
   function peilRegelMd() {
     if (!PEIL_LABEL_AAN) return "";
@@ -52,5 +54,5 @@
     return `${PEIL_MERK}<strong>Over de bedragen in deze tool.</strong> Alle wettelijke tarieven, bedragen en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk daarvan is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. Waar de tool met een aanname of schatting rekent, staat dat bij de uitkomst. <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`;
   }
 
-  g.GK_CONFIG = { MICRO, MICRO_JAAR, MINHEFFING, ZFRR_REEKS, PEIL_STAND, PEIL_LABEL_AAN, PEIL_UITLEG_URL, peilStandNl, peilStandKort, peilRegelHtml, peilRegelMd, peilVoetHtml };
+  g.GK_CONFIG = { MICRO, MICRO_JAAR, MINHEFFING, ZFRR_REEKS, PEIL_STAND, PEIL_LABEL_AAN, PEIL_UITLEG_URL, PEIL_KAART_URL, peilStandNl, peilStandKort, peilRegelHtml, peilRegelMd, peilVoetHtml };
 })(typeof window !== "undefined" ? window : globalThis);

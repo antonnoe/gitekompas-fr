@@ -11,6 +11,7 @@ const configCode = fs.readFileSync(path.join(here, "..", "peil-config.js"), "utf
 const indexHtml = fs.readFileSync(path.join(here, "..", "index.html"), "utf8");
 const WAARDEN = JSON.parse(fs.readFileSync(path.join(here, "..", "peil", "waarden.json"), "utf8"));
 const UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
+const KAART_URL = "https://communitiesabroad.com/manifest/tool/gitekompas-fr";
 
 function laad(code = configCode) {
   const ctx = {};
@@ -76,8 +77,8 @@ const KOPPELING = {
   if (WAARDEN.stand !== C.PEIL_STAND) fout(`stand in peil/waarden.json is ${WAARDEN.stand}, maar PEIL_STAND is ${C.PEIL_STAND}.`);
   if (C.peilRegelMd() !== `[Bedragen gecontroleerd tegen Peil, stand ${nl}](${UITLEG_URL})`) fout("Markdownregel klopt niet.");
   const h = C.peilRegelHtml();
-  if (!h.includes(`href="${UITLEG_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"')) fout("Stempel linkt niet naar het manifest met target _blank en rel noopener.");
-  if (!h.includes(`aria-label="Bedragen gecontroleerd tegen Peil, stand ${nl}, lees hoe wij werken"`)) fout("Stempel mist de aria-label met volledige datum.");
+  if (!h.includes(`href="${KAART_URL}"`) || !h.includes('target="_blank"') || !h.includes('rel="noopener"')) fout("Stempel linkt niet naar de toolkaart met target _blank en rel noopener.");
+  if (!h.includes(`aria-label="Bedragen gecontroleerd tegen Peil, stand ${nl}, bekijk wat er gecontroleerd is"`)) fout("Stempel mist de aria-label met volledige datum.");
   if (!h.includes("Gecontroleerd tegen Peil</span>") || !h.includes(`stand ${kort}<span class="peil-pijl" aria-hidden="true">&#8599;</span></span>`)) fout("Stempel mist de twee korte regels met pijltje.");
   if ((h.match(/<a /g) || []).length !== 1 || !h.includes("<svg") || (h.match(/#800000/g) || []).length < 3) fout("Stempel moet één link met inline svg in #800000 zijn.");
   const v = C.peilVoetHtml();
