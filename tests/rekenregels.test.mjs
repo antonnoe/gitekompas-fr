@@ -71,7 +71,7 @@ check("minimumabattement: omzet 100 = 0", run((s) => { s.context.activiteit = "m
 
 // 4. ZFRR alleen met hotelachtige diensten, en meegenomen in het regime-advies
 {
-  const basis = (s) => { s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = 20000; s.tax.zfrrOk = "yes"; s.tax.zfrrYear = 1; };
+  const basis = (s) => { s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = 20000; s.tax.zfrrOk = "yes"; s.tax.zfrrYear = 1; s.project.eigenGebruik = 0; }; // zonder eigen gebruik (bij LMNP telt dat als opbrengst, zie 5)
   check("ZFRR zonder diensten: geen vrijstelling", run((s) => { basis(s); }).zP, 0);
   check("ZFRR zonder diensten: basis 20.000", run((s) => { basis(s); }).chosenBase, 20000);
   check("ZFRR met diensten, jaar 1: belastbaar 0", run((s) => { basis(s); s.tax.zfrrDiensten = "yes"; }).chosenBase, 0);
@@ -87,12 +87,19 @@ check("minimumabattement: omzet 100 = 0", run((s) => { s.context.activiteit = "m
 {
   const basis = (s) => { s.tax.regime = "reel"; s.tax.omzet = 30000; s.financials.opexOverig = 10000; s.financials.capexRenov = 100000; s.tax.depPct = 3; };
   check("eigen gebruik 0 procent: 17.000", run((s) => { basis(s); s.project.eigenGebruik = 0; }).chosenBase, 17000);
-  check("eigen gebruik 10 procent: 18.300", run((s) => { basis(s); s.project.eigenGebruik = 10; }).chosenBase, 18300);
+  // LMP: de kosten van de periode van eigen gebruik gaan eruit (§ 59, "extourner les charges"): 30.000 - (10.000 + 3.000) x 0,9 = 18.300.
+  check("LMP eigen gebruik 10 procent: 18.300", run((s) => { basis(s); s.tax.status = "lmp"; s.project.eigenGebruik = 10; }).chosenBase, 18300);
+  // LMNP: de werkelijke huurwaarde van de periode van eigen gebruik telt als opbrengst (§ 59, "la valeur locative réelle des locaux réservés à cet usage").
+  // 10 procent van 365 = 36,5 dagen x 120 euro (standaard de gemiddelde nachtprijs) = 4.380; 30.000 + 4.380 - 10.000 - 3.000 = 21.380.
+  check("LMNP eigen gebruik 10 procent, standaard nachtprijs: 21.380", run((s) => { basis(s); s.project.eigenGebruik = 10; }).chosenBase, 21380);
+  // Zelf ingevulde huurwaarde 80 euro per nacht: 36,5 x 80 = 2.920; 30.000 + 2.920 - 13.000 = 19.920.
+  check("LMNP eigen gebruik 10 procent, huurwaarde 80: 19.920", run((s) => { basis(s); s.project.eigenGebruik = 10; s.tax.huurwaardeNacht = 80; }).chosenBase, 19920);
+  check("LMNP huurwaarde zichtbaar: 2.920", run((s) => { basis(s); s.project.eigenGebruik = 10; s.tax.huurwaardeNacht = 80; }).rc.valeurLocative, 2920);
 }
 
 // 6. Minimumheffing niet-residenten (art. 197 A)
 {
-  const non = (s, base, wereld) => { s.context.residentie = "non"; s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = base; s.tax.worldIncome = wereld || 0; };
+  const non = (s, base, wereld) => { s.context.residentie = "non"; s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = base; s.tax.worldIncome = wereld || 0; s.project.eigenGebruik = 0; }; // zonder eigen gebruik (bij LMNP telt dat als opbrengst, zie 5)
   check("minimumheffing: 10.000 = 2.000", run((s) => non(s, 10000)).minTax.amount, 2000);
   check("minimumheffing: 70.000 = 18.042,10", run((s) => non(s, 70000)).minTax.amount, 18042.10);
   const w = run((s) => non(s, 10000, 40000)).minTax;
@@ -154,12 +161,15 @@ check("minimumabattement: omzet 100 = 0", run((s) => { s.context.activiteit = "m
   check("LMP: geen doorschuivend LMNP-verlies", lmp.rc.verliesCarry, 0);
   check("LMP: verlies wel bekend (4.000)", lmp.rc.verlies, 4000);
   const eg = run((s) => { s.tax.regime = "reel"; s.tax.omzet = 30000; s.financials.opexOverig = 10000; s.project.eigenGebruik = 10; });
-  check("LMNP eigen gebruik 10 procent: kosten 9.000 aftrekbaar, basis 21.000", eg.chosenBase, 21000);
+  // Sinds 26-10-2026 volgens BOFiP CHAMP-40-20 § 59: huurwaarde 36,5 x 120 = 4.380 bij de opbrengst, kosten volledig: 30.000 + 4.380 - 10.000 = 24.380.
+  check("LMNP eigen gebruik 10 procent: huurwaarde 4.380 bij de opbrengst, basis 24.380", eg.chosenBase, 24380);
+  const egLmp = run((s) => { s.tax.regime = "reel"; s.tax.status = "lmp"; s.tax.omzet = 30000; s.financials.opexOverig = 10000; s.project.eigenGebruik = 10; });
+  check("LMP eigen gebruik 10 procent: kosten 9.000 aftrekbaar, basis 21.000", egLmp.chosenBase, 21000);
 }
 
 // R3. ZFRR: oprichtingsperiode 1-7-2024 tot en met 31-12-2029 en minder dan 11 werknemers (art. 44 quindecies A, I B en V)
 {
-  const basis = (s) => { s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = 20000; s.tax.zfrrOk = "yes"; s.tax.zfrrDiensten = "yes"; s.tax.zfrrYear = 1; };
+  const basis = (s) => { s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = 20000; s.tax.zfrrOk = "yes"; s.tax.zfrrDiensten = "yes"; s.tax.zfrrYear = 1; s.project.eigenGebruik = 0; }; // zonder eigen gebruik (bij LMNP telt dat als opbrengst, zie 5)
   check("ZFRR standaard (voorwaarden ja): belastbaar 0", run(basis).chosenBase, 0);
   check("ZFRR voorwaarden nee: 20.000", run((s) => { basis(s); s.tax.zfrrVoorwaarden = "no"; }).chosenBase, 20000);
   check("ZFRR start juni 2024: buiten periode, 20.000", run((s) => { basis(s); s.context.start = "2024-06"; }).chosenBase, 20000);

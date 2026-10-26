@@ -518,6 +518,11 @@
                 <input id="eigenGebruik" type="number" min="0" max="100" step="1" value="10" />
               </div>
               <div>
+                <label for="huurwaardeNacht">Huurwaarde per nacht tijdens eigen gebruik (€)</label>
+                <input id="huurwaardeNacht" type="number" min="0" step="1" placeholder="standaard uw gemiddelde nachtprijs" />
+                <div class="mini">Alleen bij LMNP in het régime réel: de huurwaarde van de periode van eigen gebruik telt als opbrengst (BOFiP BOI-BIC-CHAMP-40-20 § 59). Leeg laten is uw gemiddelde nachtprijs.</div>
+              </div>
+              <div>
                 <label for="strategieNote">Korte positioneringsnotitie</label>
                 <textarea id="strategieNote" placeholder="Bijv. rust/ruimte, fietsers/wandelaars, familie, workation, luxe, groepsweekenden..."></textarea>
               </div>
@@ -945,7 +950,7 @@
       omzet:20000, regime:"advise",
       omzetVorig:null, omzetVorig2:null,
       zfrrOk:"no", zfrrDiensten:"no", zfrrVoorwaarden:"yes", zfrrYear:1,
-      startjaar:"nee", status:"lmnp",
+      startjaar:"nee", status:"lmnp", huurwaardeNacht:null,
       depPct:0, worldIncome:0
     },
     marketing: {
@@ -1005,6 +1010,7 @@
   bind("badkamers","project.badkamers",(v)=>Number(v||0));
   bind("jaarrond","project.jaarrond");
   bind("eigenGebruik","project.eigenGebruik",(v)=>clamp(Number(v||0),0,100));
+  bind("huurwaardeNacht","tax.huurwaardeNacht",(v)=> (v===""||v===null||v===undefined) ? null : Math.max(0, Number(v)||0));
   bind("zwembad","project.zwembad");
   bind("ev","project.ev");
   bind("toeg","project.toeg");
@@ -1335,13 +1341,24 @@
   }
 
   // Résultat in het régime réel, na leningrente, eigen gebruik en afschrijving (art. 39, 39 C CGI; BOFiP BOI-BIC-CHAMP-40-20 § 59).
+  // Eigen gebruik, § 59: bij LMNP "inclure dans les produits [...] la valeur locative réelle des locaux réservés à cet usage", dus de
+  // huurwaarde van die periode telt als opbrengst en de kosten blijven volledig aftrekbaar; bij LMP "extourner les charges [...]
+  // correspondant à la période d'usage à titre privé", dus de kosten van die periode gaan eruit. Huurwaarde = dagen eigen gebruik
+  // (365 x percentage) x huurwaarde per nacht, standaard de gemiddelde nachtprijs van de tool.
+  function huurwaardePerNacht(){
+    const v = state.tax.huurwaardeNacht;
+    return (v===null || v===undefined || v==="") ? Math.max(0, Number(state.marketing.avgPrice||0)) : Math.max(0, Number(v)||0);
+  }
   function realCompute(omzet, opex){
     const f = state.financials;
     const u = clamp(Number(state.project.eigenGebruik||0),0,100)/100;
     const interest = loanInterestYear1(f.finLening, f.finRente, f.finJaren);
     const dep = sumCapex() * (Number(state.tax.depPct||0)/100);
-    const biz = 1-u;
-    const beforeDep = omzet - (opex+interest)*biz;
+    const lmnp = state.tax.status !== "lmp";
+    const eigenDagen = 365*u;
+    const valeurLocative = lmnp ? eigenDagen * huurwaardePerNacht() : 0;
+    const biz = lmnp ? 1 : 1-u;
+    const beforeDep = omzet + valeurLocative - (opex+interest)*biz;
     const depBiz = dep*biz;
     // Art. 39 C, II, 2 en 3: afschrijving niet verder dan het resultaat vóór afschrijving; het overschot schuift door.
     const depAllowed = Math.min(depBiz, Math.max(0, beforeDep));
@@ -1349,12 +1366,12 @@
     const raw = Math.max(0, beforeDep - depAllowed);
     // Verlies uit kosten. Bij LMNP alleen verrekenbaar met winst uit niet-beroepsmatige gemeubileerde verhuur van hetzelfde jaar en de tien volgende jaren (art. 156, I, 1° ter CGI): de tool toont het als doorschuivend.
     const verlies = Math.max(0, -beforeDep);
-    const lmnp = state.tax.status !== "lmp";
     const zP = zfrrPercent();
     return {
       interest, dep, depAllowed, depCarry, verlies, lmnp,
       verliesCarry: lmnp ? verlies : 0,
-      ownUseNotDeductible: (opex+interest+dep)*u,
+      valeurLocative, eigenDagen, huurwaardeNacht: huurwaardePerNacht(),
+      ownUseNotDeductible: lmnp ? 0 : (opex+interest+dep)*u,
       raw, zP, real: raw*(1-zP), zExempt: raw*zP
     };
   }
@@ -1617,8 +1634,8 @@
         ? `<div class="alert warn"><strong>Verlies dat doorschuift:</strong> de kosten zijn ${fmtEUR(rc.verlies)} hoger dan de omzet. Bij niet-beroepsmatige verhuur (LMNP) mag u dat verlies niet verrekenen met uw overige inkomen. Het is alleen verrekenbaar met winst uit niet-beroepsmatige gemeubileerde verhuur, in dit jaar en de tien volgende jaren (art. 156, I, 1° ter CGI). De tool rekent dit jaar met 0 en toont het verlies als doorschuivend.</div>`
         : `<div class="alert"><strong>Verlies:</strong> de kosten zijn ${fmtEUR(rc.verlies)} hoger dan de omzet. De tool rekent dit jaar met 0; hoe dit verlies bij beroepsmatige verhuur (LMP) met uw overige inkomen verrekend wordt, beoordeelt uw comptable.</div>`)
       : "";
-    const eigenTxt = (rc.ownUseNotDeductible>0 && rc.lmnp && t.chosen!=="micro")
-      ? `<div class="alert"><strong>Eigen gebruik bij LMNP:</strong> de kosten van de periode van eigen gebruik trekt de tool niet af. BOFiP (BOI-BIC-CHAMP-40-20 § 59) schrijft bij niet-beroepsmatige verhuur voor de werkelijke huurwaarde van die periode bij de opbrengst te tellen; uw comptable bepaalt dat bedrag.</div>`
+    const eigenTxt = (rc.valeurLocative>0 && rc.lmnp && t.chosen!=="micro")
+      ? `<div class="alert"><strong>Eigen gebruik bij LMNP:</strong> BOFiP (BOI-BIC-CHAMP-40-20 § 59) schrijft bij niet-beroepsmatige verhuur voor de werkelijke huurwaarde van de periode van eigen gebruik bij de opbrengst te tellen; de kosten blijven dan volledig aftrekbaar. De tool rekent ${String(Math.round(rc.eigenDagen*10)/10).replace('.', ',')} dagen maal ${fmtEUR(rc.huurwaardeNacht)} per nacht = ${fmtEUR(rc.valeurLocative)}. Wijkt de werkelijke huurwaarde af, pas dan de huurwaarde per nacht aan (Tab 2).</div>`
       : "";
     const carryTxt = rc.depCarry>0 ? `<div class="alert"><strong>Afschrijving die doorschuift:</strong> ${fmtEUR(rc.depCarry)} aan afschrijving zou het resultaat onder nul brengen. Die gaat niet verloren, maar schuift door naar volgende jaren en is dan aftrekbaar tegen latere winst uit verhuur (art. 39 C, II, 3 CGI).</div>` : "";
 
@@ -1627,6 +1644,7 @@
         <thead><tr><th>Component</th><th class="r">Waarde</th></tr></thead>
         <tbody>
           <tr><td>Omzet</td><td class="r">${fmtEUR(t.omzet)}</td></tr>
+          ${rc.valeurLocative>0 ? `<tr><td>Huurwaarde eigen gebruik (LMNP, BOFiP § 59)</td><td class="r">+ ${fmtEUR(rc.valeurLocative)}</td></tr>` : ""}
           <tr><td>OPEX (Tab 3)</td><td class="r">- ${fmtEUR(t.opex)}</td></tr>
           ${rc.interest>0 ? `<tr><td>Leningrente eerste jaar (Tab 3)</td><td class="r">- ${fmtEUR(rc.interest)}</td></tr>` : ""}
           <tr><td>Indicatieve afschrijving (Tab 4)</td><td class="r">- ${fmtEUR(t.dep)}</td></tr>
@@ -1967,6 +1985,7 @@
     setNum("badkamers", state.project.badkamers);
     if($("jaarrond").value !== state.project.jaarrond) $("jaarrond").value = state.project.jaarrond;
     setNum("eigenGebruik", state.project.eigenGebruik);
+    setNum("huurwaardeNacht", state.tax.huurwaardeNacht);
     if($("zwembad").value !== state.project.zwembad) $("zwembad").value = state.project.zwembad;
     if($("ev").value !== state.project.ev) $("ev").value = state.project.ev;
     if($("toeg").value !== state.project.toeg) $("toeg").value = state.project.toeg;
