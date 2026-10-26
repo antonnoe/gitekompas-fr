@@ -663,6 +663,21 @@
                 <input id="omzetVorig2" type="number" min="0" step="100" placeholder="Alleen nodig boven de micro-grens">
               </div>
               <div>
+                <label for="startjaar">Is dit het startjaar van de verhuur?</label>
+                <select id="startjaar">
+                  <option value="nee" selected>Nee</option>
+                  <option value="start">Ja, dit is het startjaar</option>
+                  <option value="na">Nee, het jaar na het startjaar</option>
+                </select>
+              </div>
+              <div>
+                <label for="verhuurStatus">Verhuurstatus</label>
+                <select id="verhuurStatus">
+                  <option value="lmnp" selected>Niet-beroepsmatig (LMNP)</option>
+                  <option value="lmp">Beroepsmatig (LMP)</option>
+                </select>
+              </div>
+              <div>
                 <label for="regime">Regime</label>
                 <select id="regime">
                   <option value="advise" selected>Laat tool adviseren</option>
@@ -703,6 +718,13 @@
               </div>
             </div>
             <div class="grid2" style="margin-top:8px">
+              <div>
+                <label for="zfrrVoorwaarden">Opgericht of overgenomen tussen 1 juli 2024 en 31 december 2029, met minder dan 11 werknemers</label>
+                <select id="zfrrVoorwaarden" disabled>
+                  <option value="yes" selected>Ja</option>
+                  <option value="no">Nee</option>
+                </select>
+              </div>
               <div>
                 <label for="zfrrDiensten">De verhuur omvat hotelachtige diensten (dagelijkse schoonmaak, linnengoed, ontbijt of onthaal)</label>
                 <select id="zfrrDiensten" disabled>
@@ -922,7 +944,8 @@
     tax: {
       omzet:20000, regime:"advise",
       omzetVorig:null, omzetVorig2:null,
-      zfrrOk:"no", zfrrDiensten:"no", zfrrYear:1,
+      zfrrOk:"no", zfrrDiensten:"no", zfrrVoorwaarden:"yes", zfrrYear:1,
+      startjaar:"nee", status:"lmnp",
       depPct:0, worldIncome:0
     },
     marketing: {
@@ -1003,6 +1026,9 @@
   bind("omzetVorig2","tax.omzetVorig2", v=>(v===""||v===null)?null:Number(v));
   bind("zfrrOk","tax.zfrrOk");
   bind("zfrrDiensten","tax.zfrrDiensten");
+  bind("zfrrVoorwaarden","tax.zfrrVoorwaarden");
+  bind("startjaar","tax.startjaar");
+  bind("verhuurStatus","tax.status");
   bind("zfrrYear","tax.zfrrYear", v=>Number(v||1));
   bind("depPct","tax.depPct", v=>Number(v||0));
   bind("worldIncome","tax.worldIncome", v=>Number(v||0));
@@ -1227,10 +1253,22 @@
     return sum;
   }
 
+  // Reden waarom de ZFRR-vrijstelling niet geldt, of null als aan de voorwaarden is voldaan.
+  // Art. 44 quindecies A CGI: I B (oprichting of overname 1-7-2024 tot en met 31-12-2029), V B 1° (minder dan elf werknemers);
+  // BOFiP BOI-BIC-CHAMP-80-10-75-10 § 150 en § 190 (gemeubileerde verhuur alleen met hotelachtige diensten).
+  function zfrrBlokkade(){
+    const t = state.tax;
+    if(t.zfrrOk !== "yes") return "zone";
+    if(t.zfrrVoorwaarden === "no") return "voorwaarden";
+    const st = String(state.context.start||"");
+    if(/^\d{4}-\d{2}$/.test(st) && (st < "2024-07" || st > "2029-12")) return "periode";
+    if(t.zfrrDiensten !== "yes") return "diensten";
+    return null;
+  }
+
   function zfrrPercent(){
-    if(state.tax.zfrrOk !== "yes") return 0;
-    // Art. 44 quindecies A CGI en BOFiP BOI-BIC-CHAMP-80-10-75-10 § 150 en § 190: alleen verhuur met hotelachtige diensten.
-    if(state.tax.zfrrDiensten !== "yes") return 0;
+    if(zfrrBlokkade()) return 0;
+    // Afbouw na de vrijstelling: art. 44 quindecies A I E CGI.
     const y = Number(state.tax.zfrrYear||9);
     if(y<=5) return GK.ZFRR_REEKS.jaar1tm5;
     if(y===6) return GK.ZFRR_REEKS.jaar6;
@@ -1252,9 +1290,38 @@
 
   // Toegang tot micro-BIC: de omzet van N-1 of van N-2 mag niet boven de grens liggen (art. 50-0, 1 CGI; BOFiP BOI-BIC-DECLA-10-10-10 § 30).
   // Leeg veld "omzet vorig jaar" = gelijk aan de omzet van dit jaar.
+  // Aantal exploitatiedagen in het startjaar, vanaf de eerste dag van de startmaand (tab 1) tot en met 31 december; null als de startmaand ontbreekt.
+  function startjaarDagen(){
+    const m = /^(\d{4})-(\d{2})$/.exec(String(state.context.start||""));
+    if(!m) return null;
+    const y = Number(m[1]), mo = Number(m[2]);
+    return Math.round((Date.UTC(y,11,31) - Date.UTC(y,mo-1,1))/864e5) + 1;
+  }
+
   function microAccess(omzet, mp){
     if(!mp) return { allowed:true, uncertain:false, note:null };
     const t = state.tax;
+    // Startjaar en het jaar daarna: micro-BIC geldt altijd (art. 50-0, 1 CGI; BOFiP BOI-BIC-DECLA-10-10-20 § 35).
+    // De omzet van het startjaar wordt naar 365 dagen omgerekend (art. 50-0, 1: "ajusté s'il y a lieu au prorata du temps d'exploitation"; BOFiP § 30), behalve bij een seizoensbedrijf (§ 50).
+    if(t.startjaar === "start" || t.startjaar === "na"){
+      if(t.startjaar === "na"){
+        return { allowed:true, uncertain:false, startjaar:true, omgerekend:null,
+          note:"In het jaar na het startjaar geldt micro-BIC altijd, ongeacht de omzet (art. 50-0, 1 CGI; BOFiP BOI-BIC-DECLA-10-10-20 § 35). De grens telt weer vanaf het jaar daarna." };
+      }
+      const dagen = startjaarDagen();
+      const seizoen = state.project.jaarrond === "seasonal";
+      let omgerekend = null, uitleg;
+      if(seizoen){
+        uitleg = "Bij een seizoensbedrijf wordt de omzet niet naar een vol jaar omgerekend (BOFiP BOI-BIC-DECLA-10-10-20 § 50).";
+      } else if(dagen === null){
+        uitleg = "Vul in tab 1 de startmaand in; dan rekent de tool de omzet van het startjaar om naar een vol jaar van 365 dagen.";
+      } else {
+        omgerekend = dagen < 365 ? omzet*365/dagen : omzet;
+        uitleg = `Omgerekend naar een vol jaar (${dagen} van 365 dagen in exploitatie) is de omzet ${fmtEUR(omgerekend)}; dat bedrag telt later als omzet van dit jaar bij de toetsing van de grens van ${fmtEUR(mp.limit)}.`;
+      }
+      return { allowed:true, uncertain:false, startjaar:true, omgerekend,
+        note:`In het startjaar en het jaar daarna geldt micro-BIC altijd, ongeacht de omzet (art. 50-0, 1 CGI; BOFiP BOI-BIC-DECLA-10-10-20 § 35). ${uitleg}` };
+    }
     const has = (v)=> v!==null && v!==undefined && v!=="";
     const n1 = has(t.omzetVorig) ? Number(t.omzetVorig) : omzet;
     const n1Eigen = has(t.omzetVorig);
@@ -1280,9 +1347,13 @@
     const depAllowed = Math.min(depBiz, Math.max(0, beforeDep));
     const depCarry = depBiz - depAllowed;
     const raw = Math.max(0, beforeDep - depAllowed);
+    // Verlies uit kosten. Bij LMNP alleen verrekenbaar met winst uit niet-beroepsmatige gemeubileerde verhuur van hetzelfde jaar en de tien volgende jaren (art. 156, I, 1° ter CGI): de tool toont het als doorschuivend.
+    const verlies = Math.max(0, -beforeDep);
+    const lmnp = state.tax.status !== "lmp";
     const zP = zfrrPercent();
     return {
-      interest, dep, depAllowed, depCarry,
+      interest, dep, depAllowed, depCarry, verlies, lmnp,
+      verliesCarry: lmnp ? verlies : 0,
       ownUseNotDeductible: (opex+interest+dep)*u,
       raw, zP, real: raw*(1-zP), zExempt: raw*zP
     };
@@ -1484,16 +1555,23 @@
     const ok = state.tax.zfrrOk==="yes";
     $("zfrrYear").disabled = !ok;
     $("zfrrDiensten").disabled = !ok;
+    $("zfrrVoorwaarden").disabled = !ok;
     const note = $("zfrrNote");
+    const blok = zfrrBlokkade();
     if(!ok){
       note.className="alert warn";
       note.innerHTML = "<strong>Let op:</strong> ZFRR wordt in deze tool alleen toegepast als je het zelf hebt bevestigd via een officiële zoneringscheck.";
+    } else if(blok === "voorwaarden" || blok === "periode"){
+      note.className="alert warn";
+      note.innerHTML = blok === "periode"
+        ? `<strong>ZFRR niet toegepast:</strong> de startmaand in tab 1 (${escapeHtml(state.context.start)}) valt buiten de oprichtingsperiode van 1 juli 2024 tot en met 31 december 2029 (art. 44 quindecies A, I B CGI).`
+        : "<strong>ZFRR niet toegepast:</strong> de vrijstelling geldt alleen voor een onderneming die tussen 1 juli 2024 en 31 december 2029 is opgericht of overgenomen en minder dan 11 werknemers heeft (art. 44 quindecies A, I B en V CGI).";
     } else if(state.tax.zfrrDiensten !== "yes"){
       note.className="alert warn";
       note.innerHTML = "<strong>ZFRR niet toegepast:</strong> de vrijstelling geldt voor verhuur met hotelachtige diensten (minstens dagelijkse schoonmaak van de kamers en onderhoud en levering van linnengoed, niet optioneel of apart gefactureerd). Seizoensverhuur zonder zulke diensten valt erbuiten (art. 44 quindecies A CGI; BOFiP BOI-BIC-CHAMP-80-10-75-10).";
     } else {
       note.className="alert ok";
-      note.innerHTML = "<strong>ZFRR actief:</strong> vrijstellingspercentage wordt toegepast in régime réel (indicatief), volgens het gekozen exploitatiejaar. De afbouw na jaar 5 (75, 50 en 25 procent) is een aanname van deze tool en nog niet bij de bron geverifieerd.";
+      note.innerHTML = "<strong>ZFRR actief:</strong> vrijstellingspercentage wordt toegepast in régime réel (indicatief), volgens het gekozen exploitatiejaar: volledig tot en met jaar 5, daarna 75, 50 en 25 procent (art. 44 quindecies A, I B en I E CGI). Voorwaarden: oprichting of overname tussen 1 juli 2024 en 31 december 2029, minder dan 11 werknemers en hotelachtige diensten. De wet telt in maanden (tot het einde van de 59e maand na de maand van oprichting); bij een start op 1 januari valt dat samen met de jaren in deze tool.";
     }
   }
 
@@ -1527,13 +1605,21 @@
       <span class="mini">${escapeHtml(t.advice.reason)}</span>
     </div>`;
 
-    const microAllowedTxt = !t.microAllowed ? "Micro is niet toegestaan: régime réel nodig." : (t.microAccess.uncertain ? "Micro is onzeker, zie de melding." : "Micro lijkt toegestaan (omzet vorig jaar of twee jaar geleden binnen de grens).");
-    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).${(t.zP>0 && t.zP<1) ? " Aanname: de afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd." : ""}` : (state.tax.zfrrOk==="yes" ? "ZFRR niet toegepast: geen hotelachtige diensten." : "ZFRR niet toegepast.");
+    const microAllowedTxt = t.microAccess.startjaar ? "Micro is toegestaan: startjaar of jaar na het startjaar." : !t.microAllowed ? "Micro is niet toegestaan: régime réel nodig." : (t.microAccess.uncertain ? "Micro is onzeker, zie de melding." : "Micro lijkt toegestaan (omzet vorig jaar of twee jaar geleden binnen de grens).");
+    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).` : (state.tax.zfrrOk==="yes" ? ({voorwaarden:"ZFRR niet toegepast: niet opgericht of overgenomen tussen 1 juli 2024 en 31 december 2029, of 11 werknemers of meer.", periode:"ZFRR niet toegepast: startmaand buiten de oprichtingsperiode 1 juli 2024 tot en met 31 december 2029.", diensten:"ZFRR niet toegepast: geen hotelachtige diensten."}[zfrrBlokkade()] || "ZFRR niet toegepast.") : "ZFRR niet toegepast.");
 
     const nonResTxt = (c.residentie==="non")
       ? `<div class="alert warn"><strong>Niet-resident, minimumheffing (art. 197 A CGI):</strong> <b>${fmtEUR(t.minTax.amount)}</b> inkomstenbelasting over de belastbare basis. ${minTaxUitleg(t.minTax)}</div>`
       : "";
     const rc = t.rc;
+    const verliesTxt = rc.verlies>0
+      ? (rc.lmnp
+        ? `<div class="alert warn"><strong>Verlies dat doorschuift:</strong> de kosten zijn ${fmtEUR(rc.verlies)} hoger dan de omzet. Bij niet-beroepsmatige verhuur (LMNP) mag u dat verlies niet verrekenen met uw overige inkomen. Het is alleen verrekenbaar met winst uit niet-beroepsmatige gemeubileerde verhuur, in dit jaar en de tien volgende jaren (art. 156, I, 1° ter CGI). De tool rekent dit jaar met 0 en toont het verlies als doorschuivend.</div>`
+        : `<div class="alert"><strong>Verlies:</strong> de kosten zijn ${fmtEUR(rc.verlies)} hoger dan de omzet. De tool rekent dit jaar met 0; hoe dit verlies bij beroepsmatige verhuur (LMP) met uw overige inkomen verrekend wordt, beoordeelt uw comptable.</div>`)
+      : "";
+    const eigenTxt = (rc.ownUseNotDeductible>0 && rc.lmnp && t.chosen!=="micro")
+      ? `<div class="alert"><strong>Eigen gebruik bij LMNP:</strong> de kosten van de periode van eigen gebruik trekt de tool niet af. BOFiP (BOI-BIC-CHAMP-40-20 § 59) schrijft bij niet-beroepsmatige verhuur voor de werkelijke huurwaarde van die periode bij de opbrengst te tellen; uw comptable bepaalt dat bedrag.</div>`
+      : "";
     const carryTxt = rc.depCarry>0 ? `<div class="alert"><strong>Afschrijving die doorschuift:</strong> ${fmtEUR(rc.depCarry)} aan afschrijving zou het resultaat onder nul brengen. Die gaat niet verloren, maar schuift door naar volgende jaren en is dan aftrekbaar tegen latere winst uit verhuur (art. 39 C, II, 3 CGI).</div>` : "";
 
     const baseTable = `
@@ -1546,6 +1632,7 @@
           <tr><td>Indicatieve afschrijving (Tab 4)</td><td class="r">- ${fmtEUR(t.dep)}</td></tr>
           ${rc.ownUseNotDeductible>0 ? `<tr><td>Niet aftrekbaar deel kosten (eigen gebruik)</td><td class="r">+ ${fmtEUR(rc.ownUseNotDeductible)}</td></tr>` : ""}
           ${rc.depCarry>0 ? `<tr><td>Afschrijving die doorschuift naar volgende jaren</td><td class="r">+ ${fmtEUR(rc.depCarry)}</td></tr>` : ""}
+          ${rc.verliesCarry>0 ? `<tr><td>Verlies dat doorschuift (LMNP, tien jaar)</td><td class="r">+ ${fmtEUR(rc.verliesCarry)}</td></tr>` : ""}
           <tr><td><b>Régime réel basis vóór ZFRR</b></td><td class="r">${fmtEUR(t.realBaseRaw)}</td></tr>
           <tr><td>ZFRR-vrijstelling</td><td class="r">- ${fmtEUR(t.zExemptAmt)}</td></tr>
           <tr><td><b>Régime réel basis (na ZFRR)</b></td><td class="r">${fmtEUR(t.realBase)}</td></tr>
@@ -1561,6 +1648,8 @@
       warnHtml += `<div class="alert danger"><strong>Micro-BIC niet toegestaan:</strong> ${escapeHtml(t.microAccess.note)} De tool rekent met régime réel.</div>`;
     } else if(t.microAccess.uncertain){
       warnHtml += `<div class="alert warn"><strong>Micro-grens:</strong> ${escapeHtml(t.microAccess.note)}</div>`;
+    } else if(t.microAccess.startjaar){
+      warnHtml += `<div class="alert ok"><strong>Startjaar:</strong> ${escapeHtml(t.microAccess.note)}</div>`;
     }
     if(qualityWarn.length){
       warnHtml += `<div class="alert warn"><strong>Datakwaliteit:</strong><ul>${qualityWarn.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`;
@@ -1572,6 +1661,8 @@
       ${warnHtml}
       ${baseTable}
       ${carryTxt}
+      ${verliesTxt}
+      ${eigenTxt}
       ${nonResTxt}
     `;
   }
@@ -1755,7 +1846,7 @@
 
     // Tax
     const microLine = tax.mp ? `Micro: abattement ${(tax.mp.abatt*100).toFixed(0)}% · grens ${fmtEUR(tax.mp.limit)} (${GK.MICRO_JAAR})${tax.mp.aanname ? ". Aanname: verhuur van de eigen woning rekent met het tarief voor een niet-geclassificeerd meublé" : ""}` : "Micro parameters: —";
-    const zLine = tax.zP>0 ? `ZFRR toegepast: ${(tax.zP*100).toFixed(0)}% vrijstelling (bedrag ${fmtEUR(tax.zExemptAmt)} op real-basis vóór vrijstelling).${(tax.zP>0 && tax.zP<1) ? " Aanname: de afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd." : ""}` : "ZFRR: niet toegepast.";
+    const zLine = tax.zP>0 ? `ZFRR toegepast: ${(tax.zP*100).toFixed(0)}% vrijstelling (bedrag ${fmtEUR(tax.zExemptAmt)} op real-basis vóór vrijstelling).${(tax.zP>0 && tax.zP<1) ? " Afbouw 75, 50 en 25 procent volgens art. 44 quindecies A, I E CGI." : ""}` : "ZFRR: niet toegepast.";
     $("reportTax").innerHTML = `
       <div class="mini">
         <b>Regime-advies:</b> ${tax.advice.recommended==="micro"?"Micro-BIC":"Régime réel"} · <span class="muted">${escapeHtml(tax.advice.reason)}</span><br>
@@ -1893,6 +1984,9 @@
     setNum("omzetVorig", state.tax.omzetVorig);
     setNum("omzetVorig2", state.tax.omzetVorig2);
     if($("zfrrDiensten").value !== state.tax.zfrrDiensten) $("zfrrDiensten").value = state.tax.zfrrDiensten;
+    if($("zfrrVoorwaarden").value !== state.tax.zfrrVoorwaarden) $("zfrrVoorwaarden").value = state.tax.zfrrVoorwaarden;
+    if($("startjaar").value !== state.tax.startjaar) $("startjaar").value = state.tax.startjaar;
+    if($("verhuurStatus").value !== state.tax.status) $("verhuurStatus").value = state.tax.status;
     if($("regime").value !== state.tax.regime) $("regime").value = state.tax.regime;
     if($("zfrrOk").value !== state.tax.zfrrOk) $("zfrrOk").value = state.tax.zfrrOk;
     if(String($("zfrrYear").value) !== String(state.tax.zfrrYear)) $("zfrrYear").value = String(state.tax.zfrrYear);

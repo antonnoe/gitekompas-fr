@@ -30,7 +30,7 @@
     { tot: null, tarief: 0.45 }
   ];
 
-  // Afbouw van de ZFRR-vrijstelling per exploitatiejaar. De percentages 75, 50 en 25 zijn een aanname van de tool: Peil heeft ze nog niet bij de bron geverifieerd (Peil: p.fr.gite.degressieve_reeks, status te verifiëren).
+  // Afbouw van de ZFRR-vrijstelling per exploitatiejaar: volledig tot het einde van de 59e maand, daarna belast voor een kwart, de helft en driekwart, dus vrijgesteld 75, 50 en 25 procent (art. 44 quindecies A, I B en I E CGI, LEGIARTI000053564785, gelezen 26-10-2026). In Peil (p.fr.gite.degressieve_reeks) staat nog te verifiëren; correctievoorstel ingediend bij de keuring van 26-10-2026.
   const ZFRR_REEKS = { jaar1tm5: 1.0, jaar6: 0.75, jaar7: 0.50, jaar8: 0.25, daarna: 0 };
 
   // Peil-label. Zolang PEIL_LABEL_AAN false is, toont de tool niets over Peil.

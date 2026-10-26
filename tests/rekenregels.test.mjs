@@ -128,5 +128,44 @@ check("minimumabattement: omzet 100 = 0", run((s) => { s.context.activiteit = "m
   check("afschrijving: 5.000 geboekt, 5.000 schuift door", t.rc.depCarry, 5000);
 }
 
+// R1. Startjaar: micro-BIC altijd, omzet omgerekend naar 365 dagen (art. 50-0, 1 CGI; BOFiP BOI-BIC-DECLA-10-10-20 § 30, § 35, § 50)
+{
+  const sj = (s) => { s.context.activiteit = "meuble_non"; s.context.start = "2026-08"; s.tax.omzet = 9000; s.tax.regime = "micro"; s.tax.startjaar = "start"; };
+  const t = run(sj);
+  check("startjaar: start 1 augustus, 9.000: omgerekend 21.471", t.microAccess.omgerekend, 21470.59, 0.01);
+  check("startjaar: micro toegestaan", t.microAllowed, true);
+  check("startjaar: belastbaar 6.300", t.chosenBase, 6300);
+  const t2 = run((s) => { s.context.activiteit = "meuble_non"; s.context.start = "2026-03"; s.tax.omzet = 40000; s.tax.omzetVorig = 40000; s.tax.omzetVorig2 = 40000; s.tax.regime = "micro"; s.tax.startjaar = "start"; });
+  check("startjaar boven de grens: micro blijft toegestaan", t2.microAllowed && t2.chosen === "micro", true);
+  const t3 = run((s) => { s.context.activiteit = "meuble_classe"; s.tax.omzet = 90000; s.tax.omzetVorig = 90000; s.tax.omzetVorig2 = 90000; s.tax.regime = "micro"; s.tax.startjaar = "na"; });
+  check("jaar na het startjaar: micro toegestaan", t3.microAllowed && t3.chosen === "micro", true);
+  check("seizoensbedrijf: geen omrekening", run((s) => { sj(s); s.project.jaarrond = "seasonal"; }).microAccess.omgerekend, null);
+  const t4 = run((s) => { s.context.activiteit = "meuble_classe"; s.tax.omzet = 80000; s.tax.omzetVorig = 88000; s.tax.omzetVorig2 = 90000; s.tax.regime = "micro"; });
+  check("standaard geen startjaar: twee jaar boven de grens blijft réel", t4.chosen, "reel");
+}
+
+// R2. Verlies bij LMNP schuift door (art. 156, I, 1° ter CGI); eigen gebruik: kosten naar rato niet aftrekbaar
+{
+  const basis = (s) => { s.tax.regime = "reel"; s.project.eigenGebruik = 0; s.tax.omzet = 10000; s.financials.opexOverig = 14000; };
+  const t = run(basis);
+  check("LMNP: belastbaar 0", t.chosenBase, 0);
+  check("LMNP: verlies 4.000 schuift door", t.rc.verliesCarry, 4000);
+  const lmp = run((s) => { basis(s); s.tax.status = "lmp"; });
+  check("LMP: geen doorschuivend LMNP-verlies", lmp.rc.verliesCarry, 0);
+  check("LMP: verlies wel bekend (4.000)", lmp.rc.verlies, 4000);
+  const eg = run((s) => { s.tax.regime = "reel"; s.tax.omzet = 30000; s.financials.opexOverig = 10000; s.project.eigenGebruik = 10; });
+  check("LMNP eigen gebruik 10 procent: kosten 9.000 aftrekbaar, basis 21.000", eg.chosenBase, 21000);
+}
+
+// R3. ZFRR: oprichtingsperiode 1-7-2024 tot en met 31-12-2029 en minder dan 11 werknemers (art. 44 quindecies A, I B en V)
+{
+  const basis = (s) => { s.context.activiteit = "meuble_classe"; s.tax.regime = "reel"; s.tax.omzet = 20000; s.tax.zfrrOk = "yes"; s.tax.zfrrDiensten = "yes"; s.tax.zfrrYear = 1; };
+  check("ZFRR standaard (voorwaarden ja): belastbaar 0", run(basis).chosenBase, 0);
+  check("ZFRR voorwaarden nee: 20.000", run((s) => { basis(s); s.tax.zfrrVoorwaarden = "no"; }).chosenBase, 20000);
+  check("ZFRR start juni 2024: buiten periode, 20.000", run((s) => { basis(s); s.context.start = "2024-06"; }).chosenBase, 20000);
+  check("ZFRR start juli 2024: binnen periode, 0", run((s) => { basis(s); s.context.start = "2024-07"; }).chosenBase, 0);
+  check("ZFRR start januari 2030: buiten periode, 20.000", run((s) => { basis(s); s.context.start = "2030-01"; }).chosenBase, 20000);
+}
+
 console.log(fouten ? `\n${fouten} van ${n} controles mislukt.` : `\nAlle ${n} rekencontroles komen overeen met de wettelijke uitkomst.`);
 process.exit(fouten ? 1 : 0);

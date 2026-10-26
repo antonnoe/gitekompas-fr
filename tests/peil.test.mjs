@@ -59,14 +59,16 @@ const KOPPELING = {
     constante: "IR_SCHIJVEN",
     vergelijk: (w) => [["schijven per part", C.IR_SCHIJVEN, w]],
   },
-  // Status te verifiëren: waarde null in Peil. De tool rekent wel met 75/50/25 procent en moet dat als aanname tonen.
+  // Status te verifiëren in Peil (waarde null). De reeks 75/50/25 staat in art. 44 quindecies A, I E CGI (keuring 26-10-2026, correctievoorstel bij Peil).
+  // Krijgt Peil een waarde, dan faalt de eerste controle en moet ZFRR_REEKS ermee vergeleken worden.
   "p.fr.gite.degressieve_reeks": {
-    constante: "ZFRR_REEKS (aanname, niet geverifieerd)",
+    constante: "ZFRR_REEKS (art. 44 quindecies A, I E CGI)",
     vergelijk: (w, kop) => [
       ["Peil heeft nog geen waarde (null); wijzigt dat, dan moet ZFRR_REEKS vergeleken worden", null, w],
       ["status in waarden.json is te_verifieren", "te_verifieren", kop.status],
-      ["tool toont de reeks als aanname (zfrrNote)", true, /afbouw na jaar 5 \(75, 50 en 25 procent\) is een aanname/.test(indexHtml)],
-      ["tool toont de reeks als aanname (uitkomst)", true, (indexHtml.match(/afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd/g) || []).length === 2],
+      ["tool noemt de reeks geen aanname meer", false, /nog niet bij de bron geverifieerd|is een aanname van deze tool en nog niet/.test(indexHtml)],
+      ["tool noemt de wettelijke grondslag (zfrrNote)", true, /75, 50 en 25 procent \(art\. 44 quindecies A, I B en I E CGI\)/.test(indexHtml)],
+      ["config noemt de wettelijke grondslag", true, /art\. 44 quindecies A, I B en I E CGI/.test(configCode)],
       ["reeks in de config", { jaar1tm5: 1, jaar6: 0.75, jaar7: 0.5, jaar8: 0.25, daarna: 0 }, C.ZFRR_REEKS],
     ],
   },
