@@ -655,6 +655,14 @@
                 <input id="omzet" type="number" min="0" step="100" value="20000">
               </div>
               <div>
+                <label for="omzetVorig">Omzet vorig jaar</label>
+                <input id="omzetVorig" type="number" min="0" step="100" placeholder="Leeg = gelijk aan omzet dit jaar">
+              </div>
+              <div>
+                <label for="omzetVorig2">Omzet twee jaar geleden (optioneel)</label>
+                <input id="omzetVorig2" type="number" min="0" step="100" placeholder="Alleen nodig boven de micro-grens">
+              </div>
+              <div>
                 <label for="regime">Regime</label>
                 <select id="regime">
                   <option value="advise" selected>Laat tool adviseren</option>
@@ -694,6 +702,15 @@
                 </select>
               </div>
             </div>
+            <div class="grid2" style="margin-top:8px">
+              <div>
+                <label for="zfrrDiensten">De verhuur omvat hotelachtige diensten (dagelijkse schoonmaak, linnengoed, ontbijt of onthaal)</label>
+                <select id="zfrrDiensten" disabled>
+                  <option value="no" selected>Nee</option>
+                  <option value="yes">Ja</option>
+                </select>
+              </div>
+            </div>
             <div class="alert" id="zfrrNote"></div>
           </div>
 
@@ -709,7 +726,7 @@
                 <input id="worldIncome" type="number" min="0" step="1000" value="0" placeholder="Alleen voor scenario’s">
               </div>
             </div>
-            <div class="muted">Let op: V1 gebruikt dit uitsluitend om bandbreedtes te tonen (geen aanslag-garantie).</div>
+            <div class="muted">Let op: de afschrijving geldt alleen in het régime réel. Het wereldinkomen gebruikt de tool alleen om bij de minimumheffing voor niet-residenten het gemiddelde tarief te vergelijken (geen aanslag-garantie).</div>
           </div>
 
           <div class="card ok" id="taxResult"></div>
@@ -863,7 +880,7 @@
           <div class="mini">
             <b>Soft gates:</b> je mag overal starten, maar de tool toont duidelijk wat nog ontbreekt.<br>
             <b>Geen zwevende tooltips:</b> uitleg staat onder velden en is klikbaar (details/summary).<br>
-            <b>Scenario’s:</b> marketing en niet-resident onderdelen werken met bandbreedtes.
+            <b>Scenario’s:</b> marketing- en niet-residentonderdelen zijn indicatief.
           </div>
         </div>
       </aside>
@@ -904,7 +921,8 @@
     },
     tax: {
       omzet:20000, regime:"advise",
-      zfrrOk:"no", zfrrYear:1,
+      omzetVorig:null, omzetVorig2:null,
+      zfrrOk:"no", zfrrDiensten:"no", zfrrYear:1,
       depPct:0, worldIncome:0
     },
     marketing: {
@@ -981,7 +999,10 @@
   // Tab4
   bind("omzet","tax.omzet", v=>Number(v||0));
   bind("regime","tax.regime");
+  bind("omzetVorig","tax.omzetVorig", v=>(v===""||v===null)?null:Number(v));
+  bind("omzetVorig2","tax.omzetVorig2", v=>(v===""||v===null)?null:Number(v));
   bind("zfrrOk","tax.zfrrOk");
+  bind("zfrrDiensten","tax.zfrrDiensten");
   bind("zfrrYear","tax.zfrrYear", v=>Number(v||1));
   bind("depPct","tax.depPct", v=>Number(v||0));
   bind("worldIncome","tax.worldIncome", v=>Number(v||0));
@@ -1190,8 +1211,26 @@
     return (P*r) / (1 - Math.pow(1+r, -n));
   }
 
+  // Rente van het eerste jaar uit de ingevoerde lening (annuïteit). Aftrekbaar in het régime réel (art. 39, 1 CGI).
+  function loanInterestYear1(P, annualRatePct, years){
+    P = Number(P||0);
+    if(P<=0) return 0;
+    const r = (Number(annualRatePct||0)/100)/12;
+    const n = Math.max(1, Number(years||1)*12);
+    const pay = loanMonthlyPayment(P, annualRatePct, years);
+    let bal = P, sum = 0;
+    for(let m=0; m<Math.min(12,n); m++){
+      const i = bal*r;
+      sum += i;
+      bal -= (pay - i);
+    }
+    return sum;
+  }
+
   function zfrrPercent(){
     if(state.tax.zfrrOk !== "yes") return 0;
+    // Art. 44 quindecies A CGI en BOFiP BOI-BIC-CHAMP-80-10-75-10 § 150 en § 190: alleen verhuur met hotelachtige diensten.
+    if(state.tax.zfrrDiensten !== "yes") return 0;
     const y = Number(state.tax.zfrrYear||9);
     if(y<=5) return GK.ZFRR_REEKS.jaar1tm5;
     if(y===6) return GK.ZFRR_REEKS.jaar6;
@@ -1204,18 +1243,90 @@
     return MICRO[state.context.activiteit] || null;
   }
 
+  // Belastbare basis micro-BIC: omzet min abattement, het abattement is minstens 305 euro (art. 50-0, 1 CGI).
+  function microBaseFor(omzet, mp){
+    if(!mp) return 0;
+    const abatt = Math.max(omzet*mp.abatt, GK.MICRO_MIN_ABATT);
+    return Math.max(0, omzet - abatt);
+  }
+
+  // Toegang tot micro-BIC: de omzet van N-1 of van N-2 mag niet boven de grens liggen (art. 50-0, 1 CGI; BOFiP BOI-BIC-DECLA-10-10-10 § 30).
+  // Leeg veld "omzet vorig jaar" = gelijk aan de omzet van dit jaar.
+  function microAccess(omzet, mp){
+    if(!mp) return { allowed:true, uncertain:false, note:null };
+    const t = state.tax;
+    const has = (v)=> v!==null && v!==undefined && v!=="";
+    const n1 = has(t.omzetVorig) ? Number(t.omzetVorig) : omzet;
+    const n1Eigen = has(t.omzetVorig);
+    if(n1 <= mp.limit) return { allowed:true, uncertain:false, note:null };
+    const ref = n1Eigen ? "De omzet van vorig jaar" : "De ingevulde omzet (die ook voor vorig jaar geldt zolang u dat niet apart invult)";
+    if(has(t.omzetVorig2)){
+      if(Number(t.omzetVorig2) <= mp.limit) return { allowed:true, uncertain:false, note:null };
+      return { allowed:false, uncertain:false, note:`De omzet van vorig jaar en van twee jaar geleden lag beide boven de grens (${fmtEUR(mp.limit)}): het régime réel geldt dan van rechtswege.` };
+    }
+    return { allowed:true, uncertain:true, note:`${ref} ligt boven de grens (${fmtEUR(mp.limit)}). Lag ook de omzet van twee jaar geleden erboven, dan geldt het régime réel van rechtswege; vul die omzet in om dat te toetsen.` };
+  }
+
+  // Résultat in het régime réel, na leningrente, eigen gebruik en afschrijving (art. 39, 39 C CGI; BOFiP BOI-BIC-CHAMP-40-20 § 59).
+  function realCompute(omzet, opex){
+    const f = state.financials;
+    const u = clamp(Number(state.project.eigenGebruik||0),0,100)/100;
+    const interest = loanInterestYear1(f.finLening, f.finRente, f.finJaren);
+    const dep = sumCapex() * (Number(state.tax.depPct||0)/100);
+    const biz = 1-u;
+    const beforeDep = omzet - (opex+interest)*biz;
+    const depBiz = dep*biz;
+    // Art. 39 C, II, 2 en 3: afschrijving niet verder dan het resultaat vóór afschrijving; het overschot schuift door.
+    const depAllowed = Math.min(depBiz, Math.max(0, beforeDep));
+    const depCarry = depBiz - depAllowed;
+    const raw = Math.max(0, beforeDep - depAllowed);
+    const zP = zfrrPercent();
+    return {
+      interest, dep, depAllowed, depCarry,
+      ownUseNotDeductible: (opex+interest+dep)*u,
+      raw, zP, real: raw*(1-zP), zExempt: raw*zP
+    };
+  }
+
   function adviseRegime(omzet, opexTotal){
     // heuristic: compare micro basis vs real basis
     const mp = microParams();
     if(!mp) return { recommended:"micro", reason:"Geen micro-parameters bekend; default micro." };
-    const microBase = omzet * (1-mp.abatt);
-    const dep = (sumCapex() * (Number(state.tax.depPct||0)/100)); // annual
-    const realBase = Math.max(0, omzet - opexTotal - dep);
-    // If omzet > limit => micro not allowed (heuristic)
-    if(omzet > mp.limit) return { recommended:"reel", reason:`Micro lijkt boven de indicatieve omzetgrens (${fmtEUR(mp.limit)}).` };
+    const microBase = microBaseFor(omzet, mp);
+    const realBase = realCompute(omzet, opexTotal).real;
+    const acc = microAccess(omzet, mp);
+    if(!acc.allowed) return { recommended:"reel", reason:acc.note };
+    if(acc.uncertain) return { recommended:"reel", reason:`Micro is onzeker: de omzetgrens (${fmtEUR(mp.limit)}) is volgens uw invoer overschreden en de omzet van twee jaar geleden ontbreekt.` };
     // Choose lower taxable base
     if(realBase < microBase) return { recommended:"reel", reason:"Régime réel geeft (met jouw kosteninput) een lagere belastbare basis." };
     return { recommended:"micro", reason:"Micro-BIC geeft (met huidige aannames) een lagere of vergelijkbare belastbare basis en is administratief eenvoudiger." };
+  }
+
+  // Barème per part over een bedrag (zonder décote en zonder plafonnering quotient familial).
+  function baremaTax(x){
+    let tax = 0, prev = 0;
+    for(const sch of GK.IR_SCHIJVEN){
+      const top = (sch.tot===null) ? Infinity : sch.tot;
+      if(x > prev) tax += (Math.min(x, top) - prev) * sch.tarief;
+      if(x <= top) break;
+      prev = top;
+    }
+    return tax;
+  }
+
+  // Minimumheffing niet-residenten, art. 197 A a CGI: 20 procent tot de grens en 30 procent daarboven, tenzij het gemiddelde tarief over het wereldinkomen lager is.
+  // Het resultaat is nooit lager dan het barème over het Franse inkomen. Geen décote (art. 197 I 4 valt buiten de verwijzing van art. 197 A).
+  function minimumheffing(base, worldIncome){
+    const g = GK.MINHEFFING.grens;
+    const minimum = GK.MINHEFFING.laag*Math.min(base,g) + GK.MINHEFFING.hoog*Math.max(0,base-g);
+    const baremaFr = baremaTax(base);
+    const w = Number(worldIncome||0);
+    let tauxMoyen = null, viaTauxMoyen = false, afterTM = minimum;
+    if(base>0 && w>0 && w>=base){
+      tauxMoyen = baremaTax(w)/w;
+      if(base*tauxMoyen < minimum){ afterTM = base*tauxMoyen; viaTauxMoyen = true; }
+    }
+    return { amount: Math.max(baremaFr, afterTM), minimum, baremaFr, tauxMoyen, viaTauxMoyen, worldUsed: tauxMoyen!==null };
   }
 
   function taxCompute(){
@@ -1223,15 +1334,18 @@
     const mp = microParams();
     const opex = sumOpex();
     const capex = sumCapex();
-    const dep = capex * (Number(state.tax.depPct||0)/100); // annual estimate
-    const zP = zfrrPercent();
 
-    const microAllowed = mp ? (omzet <= mp.limit) : true;
-    const microBase = mp ? Math.max(0, omzet * (1-mp.abatt)) : 0;
+    const rc = realCompute(omzet, opex);
+    const dep = rc.dep;
+    const zP = rc.zP;
 
-    const realBaseRaw = Math.max(0, omzet - opex - dep);
-    const realBase = Math.max(0, realBaseRaw * (1 - zP));
-    const zExemptAmt = realBaseRaw * zP;
+    const access = microAccess(omzet, mp);
+    const microAllowed = access.allowed;
+    const microBase = microBaseFor(omzet, mp);
+
+    const realBaseRaw = rc.raw;
+    const realBase = rc.real;
+    const zExemptAmt = rc.zExempt;
 
     const advice = adviseRegime(omzet, opex);
 
@@ -1241,18 +1355,17 @@
 
     const chosenBase = chosen==="micro" ? microBase : realBase;
 
-    // Non-resident minimum tax scenario (range 20–30%).
+    // Niet-resident: minimumheffing als één bedrag (art. 197 A).
     const isNon = state.context.residentie==="non";
-    const minTaxLow = isNon ? chosenBase*GK.MINHEFFING.laag : null;
-    const minTaxHigh = isNon ? chosenBase*GK.MINHEFFING.hoog : null;
+    const minTax = isNon ? minimumheffing(chosenBase, state.tax.worldIncome) : null;
 
     return {
       omzet, mp, opex, capex, dep,
-      microAllowed, microBase,
-      realBaseRaw, realBase,
+      microAllowed, microAccess: access, microBase,
+      realBaseRaw, realBase, rc,
       zP, zExemptAmt,
       advice, chosen, chosenBase,
-      minTaxLow, minTaxHigh
+      minTax
     };
   }
 
@@ -1274,12 +1387,12 @@
     const sumShares = shares.reduce((a,x)=>a+x.share,0) || 0;
     // Normalize if not 100
     const norm = (sumShares>0) ? 100/sumShares : 0;
-    const weightedFeePct = sumShares>0 ? shares.reduce((a,x)=>a+(x.share*norm)*(x.fee/100),0) : 0;
+    const weightedFeePct = sumShares>0 ? shares.reduce((a,x)=>a+((x.share*norm)/100)*(x.fee/100),0) : 0;
 
     function scenario(occPct){
       const occ = clamp(Number(occPct||0),0,100)/100;
       const nightsSold = Math.round(availableDays * occ);
-      const stays = Math.max(1, Math.round(nightsSold / avgStay));
+      const stays = nightsSold>0 ? Math.max(1, Math.round(nightsSold / avgStay)) : 0;
       const gross = nightsSold * avgPrice;
       const cleaningRev = cleaning>0 ? stays*cleaning : 0;
       const grossTotal = gross + cleaningRev;
@@ -1370,14 +1483,29 @@
   function renderZFrrControls(){
     const ok = state.tax.zfrrOk==="yes";
     $("zfrrYear").disabled = !ok;
+    $("zfrrDiensten").disabled = !ok;
     const note = $("zfrrNote");
     if(!ok){
       note.className="alert warn";
       note.innerHTML = "<strong>Let op:</strong> ZFRR wordt in deze tool alleen toegepast als je het zelf hebt bevestigd via een officiële zoneringscheck.";
+    } else if(state.tax.zfrrDiensten !== "yes"){
+      note.className="alert warn";
+      note.innerHTML = "<strong>ZFRR niet toegepast:</strong> de vrijstelling geldt voor verhuur met hotelachtige diensten (minstens dagelijkse schoonmaak van de kamers en onderhoud en levering van linnengoed, niet optioneel of apart gefactureerd). Seizoensverhuur zonder zulke diensten valt erbuiten (art. 44 quindecies A CGI; BOFiP BOI-BIC-CHAMP-80-10-75-10).";
     } else {
       note.className="alert ok";
       note.innerHTML = "<strong>ZFRR actief:</strong> vrijstellingspercentage wordt toegepast in régime réel (indicatief), volgens het gekozen exploitatiejaar. De afbouw na jaar 5 (75, 50 en 25 procent) is een aanname van deze tool en nog niet bij de bron geverifieerd.";
     }
+  }
+
+  function minTaxUitleg(m){
+    const g = fmtEUR(GK.MINHEFFING.grens);
+    let txt = `Het tarief is ${(GK.MINHEFFING.laag*100).toFixed(0)}% tot ${g} en ${(GK.MINHEFFING.hoog*100).toFixed(0)}% over het deel daarboven (${fmtEUR(m.minimum)}); het barème over het Franse inkomen geeft ${fmtEUR(m.baremaFr)} en het hoogste van beide geldt. Berekend met één part en zonder décote.`;
+    if(m.worldUsed){
+      txt += m.viaTauxMoyen
+        ? ` Uw wereldinkomen geeft een gemiddeld tarief van ${(m.tauxMoyen*100).toFixed(2)}%, lager dan het minimum; dat lagere tarief is toegepast, op voorwaarde dat u het kunt aantonen.`
+        : ` Uw wereldinkomen geeft een gemiddeld tarief van ${(m.tauxMoyen*100).toFixed(2)}%, niet lager dan het minimum, dus het minimum blijft gelden.`;
+    }
+    return escapeHtml(txt);
   }
 
   function renderTax(){
@@ -1399,12 +1527,14 @@
       <span class="mini">${escapeHtml(t.advice.reason)}</span>
     </div>`;
 
-    const microAllowedTxt = t.microAllowed ? "Micro lijkt toegestaan binnen grens (indicatief)." : "Micro lijkt boven de grens → régime réel nodig.";
-    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).${(t.zP>0 && t.zP<1) ? " Aanname: de afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd." : ""}` : "ZFRR niet toegepast.";
+    const microAllowedTxt = !t.microAllowed ? "Micro is niet toegestaan: régime réel nodig." : (t.microAccess.uncertain ? "Micro is onzeker, zie de melding." : "Micro lijkt toegestaan (omzet vorig jaar of twee jaar geleden binnen de grens).");
+    const zTxt = (t.zP>0) ? `ZFRR vrijstelling: ${(t.zP*100).toFixed(0)}% (bedrag ${fmtEUR(t.zExemptAmt)} op real-basis vóór vrijstelling).${(t.zP>0 && t.zP<1) ? " Aanname: de afbouwpercentages van 75, 50 en 25 procent zijn nog niet bij de bron geverifieerd." : ""}` : (state.tax.zfrrOk==="yes" ? "ZFRR niet toegepast: geen hotelachtige diensten." : "ZFRR niet toegepast.");
 
     const nonResTxt = (c.residentie==="non")
-      ? `<div class="alert warn"><strong>Niet-resident scenario:</strong> minimumheffing wordt vaak als 20–30% bandbreedte gebruikt (afhankelijk van schijven/regels). In deze V1 tonen we daarom een range: <b>${fmtEUR(t.minTaxLow)} – ${fmtEUR(t.minTaxHigh)}</b>.</div>`
+      ? `<div class="alert warn"><strong>Niet-resident, minimumheffing (art. 197 A CGI):</strong> <b>${fmtEUR(t.minTax.amount)}</b> inkomstenbelasting over de belastbare basis. ${minTaxUitleg(t.minTax)}</div>`
       : "";
+    const rc = t.rc;
+    const carryTxt = rc.depCarry>0 ? `<div class="alert"><strong>Afschrijving die doorschuift:</strong> ${fmtEUR(rc.depCarry)} aan afschrijving zou het resultaat onder nul brengen. Die gaat niet verloren, maar schuift door naar volgende jaren en is dan aftrekbaar tegen latere winst uit verhuur (art. 39 C, II, 3 CGI).</div>` : "";
 
     const baseTable = `
       <table>
@@ -1412,7 +1542,10 @@
         <tbody>
           <tr><td>Omzet</td><td class="r">${fmtEUR(t.omzet)}</td></tr>
           <tr><td>OPEX (Tab 3)</td><td class="r">- ${fmtEUR(t.opex)}</td></tr>
+          ${rc.interest>0 ? `<tr><td>Leningrente eerste jaar (Tab 3)</td><td class="r">- ${fmtEUR(rc.interest)}</td></tr>` : ""}
           <tr><td>Indicatieve afschrijving (Tab 4)</td><td class="r">- ${fmtEUR(t.dep)}</td></tr>
+          ${rc.ownUseNotDeductible>0 ? `<tr><td>Niet aftrekbaar deel kosten (eigen gebruik)</td><td class="r">+ ${fmtEUR(rc.ownUseNotDeductible)}</td></tr>` : ""}
+          ${rc.depCarry>0 ? `<tr><td>Afschrijving die doorschuift naar volgende jaren</td><td class="r">+ ${fmtEUR(rc.depCarry)}</td></tr>` : ""}
           <tr><td><b>Régime réel basis vóór ZFRR</b></td><td class="r">${fmtEUR(t.realBaseRaw)}</td></tr>
           <tr><td>ZFRR-vrijstelling</td><td class="r">- ${fmtEUR(t.zExemptAmt)}</td></tr>
           <tr><td><b>Régime réel basis (na ZFRR)</b></td><td class="r">${fmtEUR(t.realBase)}</td></tr>
@@ -1425,7 +1558,9 @@
 
     let warnHtml = "";
     if(t.mp && !t.microAllowed){
-      warnHtml += `<div class="alert danger"><strong>Overschrijding (indicatief):</strong> omzet boven micro-grens (${fmtEUR(t.mp.limit)}). Tool forceert régime réel.</div>`;
+      warnHtml += `<div class="alert danger"><strong>Micro-BIC niet toegestaan:</strong> ${escapeHtml(t.microAccess.note)} De tool rekent met régime réel.</div>`;
+    } else if(t.microAccess.uncertain){
+      warnHtml += `<div class="alert warn"><strong>Micro-grens:</strong> ${escapeHtml(t.microAccess.note)}</div>`;
     }
     if(qualityWarn.length){
       warnHtml += `<div class="alert warn"><strong>Datakwaliteit:</strong><ul>${qualityWarn.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`;
@@ -1436,6 +1571,7 @@
       ${adviceBox}
       ${warnHtml}
       ${baseTable}
+      ${carryTxt}
       ${nonResTxt}
     `;
   }
@@ -1636,7 +1772,9 @@
           <tr><td><b>Belastbare basis (gekozen)</b></td><td class="r"><b>${fmtEUR(tax.chosenBase)}</b></td></tr>
         </tbody>
       </table>
-      ${(c.residentie==="non") ? `<div class="mini" style="margin-top:8px"><b>Niet-resident bandbreedte:</b> minimumheffing scenario 20–30% → ${fmtEUR(tax.minTaxLow)} – ${fmtEUR(tax.minTaxHigh)}.</div>` : ""}
+      ${tax.rc.depCarry>0 ? `<div class="mini" style="margin-top:8px"><b>Afschrijving die doorschuift:</b> ${fmtEUR(tax.rc.depCarry)} gaat niet verloren, maar schuift door naar volgende jaren (art. 39 C, II, 3 CGI).</div>` : ""}
+      ${tax.microAccess.note ? `<div class="mini" style="margin-top:8px"><b>Micro-grens:</b> ${escapeHtml(tax.microAccess.note)}</div>` : ""}
+      ${(c.residentie==="non") ? `<div class="mini" style="margin-top:8px"><b>Niet-resident, minimumheffing (art. 197 A CGI):</b> ${fmtEUR(tax.minTax.amount)}. ${minTaxUitleg(tax.minTax)}</div>` : ""}
     `;
 
     // Marketing
@@ -1752,6 +1890,9 @@
 
     // Tab4
     setNum("omzet", state.tax.omzet);
+    setNum("omzetVorig", state.tax.omzetVorig);
+    setNum("omzetVorig2", state.tax.omzetVorig2);
+    if($("zfrrDiensten").value !== state.tax.zfrrDiensten) $("zfrrDiensten").value = state.tax.zfrrDiensten;
     if($("regime").value !== state.tax.regime) $("regime").value = state.tax.regime;
     if($("zfrrOk").value !== state.tax.zfrrOk) $("zfrrOk").value = state.tax.zfrrOk;
     if(String($("zfrrYear").value) !== String(state.tax.zfrrYear)) $("zfrrYear").value = String(state.tax.zfrrYear);

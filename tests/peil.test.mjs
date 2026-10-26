@@ -52,7 +52,12 @@ const KOPPELING = {
     vergelijk: (w) => [
       ["onderste tarief van de bandbreedte", C.MINHEFFING.laag, w && w.tarief_tot_grens],
       ["bovenste tarief van de bandbreedte", C.MINHEFFING.hoog, w && w.tarief_boven_grens],
+      ["grens (bovengrens tweede schijf)", C.MINHEFFING.grens, w && w.grens],
     ],
+  },
+  "p.fr.ir.schijven": {
+    constante: "IR_SCHIJVEN",
+    vergelijk: (w) => [["schijven per part", C.IR_SCHIJVEN, w]],
   },
   // Status te verifiëren: waarde null in Peil. De tool rekent wel met 75/50/25 procent en moet dat als aanname tonen.
   "p.fr.gite.degressieve_reeks": {

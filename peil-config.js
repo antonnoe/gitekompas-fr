@@ -15,8 +15,20 @@
   };
   const MICRO_JAAR = "inkomsten 2026";
 
-  // Minimumheffing niet-residenten (art. 197 A CGI): de tool toont een bandbreedte van 20 tot 30 procent (Peil: p.fr.gite.minimumheffing_niet_residenten).
-  const MINHEFFING = { laag: 0.20, hoog: 0.30 };
+  // Minimumabattement micro-BIC: het abattement bedraagt minstens 305 euro (art. 50-0, 1 CGI, "Ces abattements ne peuvent être inférieurs à 305 €"; BOFiP BOI-BIC-CHAMP-40-20 § 55).
+  const MICRO_MIN_ABATT = 305;
+
+  // Minimumheffing niet-residenten (art. 197 A CGI): 20 procent tot en met de grens (bovengrens van de tweede schijf, art. 197 I 1, inkomsten 2025) en 30 procent over het deel daarboven (Peil: p.fr.gite.minimumheffing_niet_residenten).
+  const MINHEFFING = { laag: 0.20, hoog: 0.30, grens: 29579 };
+
+  // Barème impôt sur le revenu per part, inkomsten 2025 (art. 197 I 1 CGI, LF 2026; Peil: p.fr.ir.schijven). Alleen gebruikt om het gemiddelde tarief (taux moyen) bij de minimumheffing van art. 197 A te bepalen; zonder décote, die geldt niet voor niet-residenten.
+  const IR_SCHIJVEN = [
+    { tot: 11600, tarief: 0 },
+    { tot: 29579, tarief: 0.11 },
+    { tot: 84577, tarief: 0.30 },
+    { tot: 181917, tarief: 0.41 },
+    { tot: null, tarief: 0.45 }
+  ];
 
   // Afbouw van de ZFRR-vrijstelling per exploitatiejaar. De percentages 75, 50 en 25 zijn een aanname van de tool: Peil heeft ze nog niet bij de bron geverifieerd (Peil: p.fr.gite.degressieve_reeks, status te verifiëren).
   const ZFRR_REEKS = { jaar1tm5: 1.0, jaar6: 0.75, jaar7: 0.50, jaar8: 0.25, daarna: 0 };
@@ -54,5 +66,5 @@
     return `${PEIL_MERK}<strong>Over de bedragen in deze tool.</strong> Alle wettelijke tarieven, bedragen en grenzen komen uit Peil, het register waarin wij deze gegevens bijhouden. Elk daarvan is gecontroleerd bij de officiële bron, de laatste controle was op ${escapeHtml(peilStandNl())}. Waar de tool met een aanname of schatting rekent, staat dat bij de uitkomst. <a href="${PEIL_UITLEG_URL}" target="_blank" rel="noopener">Lees in ons manifest hoe wij werken</a>`;
   }
 
-  g.GK_CONFIG = { MICRO, MICRO_JAAR, MINHEFFING, ZFRR_REEKS, PEIL_STAND, PEIL_LABEL_AAN, PEIL_UITLEG_URL, PEIL_KAART_URL, peilStandNl, peilStandKort, peilRegelHtml, peilRegelMd, peilVoetHtml };
+  g.GK_CONFIG = { MICRO, MICRO_JAAR, MICRO_MIN_ABATT, MINHEFFING, IR_SCHIJVEN, ZFRR_REEKS, PEIL_STAND, PEIL_LABEL_AAN, PEIL_UITLEG_URL, PEIL_KAART_URL, peilStandNl, peilStandKort, peilRegelHtml, peilRegelMd, peilVoetHtml };
 })(typeof window !== "undefined" ? window : globalThis);

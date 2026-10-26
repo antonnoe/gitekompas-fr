@@ -61,6 +61,35 @@
       "waarde_weergave": null,
       "bron_url": null,
       "verificatiedatum": null
+    },
+    {
+      "id": "p.fr.ir.schijven",
+      "waarde": [
+        {
+          "tot": 11600,
+          "tarief": 0
+        },
+        {
+          "tot": 29579,
+          "tarief": 0.11
+        },
+        {
+          "tot": 84577,
+          "tarief": 0.3
+        },
+        {
+          "tot": 181917,
+          "tarief": 0.41
+        },
+        {
+          "tot": null,
+          "tarief": 0.45
+        }
+      ],
+      "naam": "Schijven en tarieven impôt sur le revenu, per part (inkomstenjaar 2025, aangifte 2026)",
+      "waarde_weergave": "0 procent tot 11.600, 11 procent tot 29.579, 30 procent tot 84.577, 41 procent tot 181.917, 45 procent daarboven (per part, inkomsten 2025)",
+      "bron_url": "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_integral/Brochure-IR-2026.pdf",
+      "verificatiedatum": "2026-10-19"
     }
   ]
 }
