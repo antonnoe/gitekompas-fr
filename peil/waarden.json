@@ -1,6 +1,6 @@
 {
   "stand": "2026-10-26",
-  "registerversie": "1.12.0",
+  "registerversie": "1.12.1",
   "toelichting": "Kopie van de waarden uit Peil, het parameterregister van Communities Abroad. Wordt bijgewerkt door de Peil-agent; tests/peil.test.mjs vergelijkt peil-config.js hiermee.",
   "parameters": [
     {
