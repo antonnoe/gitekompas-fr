@@ -1,8 +1,65 @@
 {
-  "stand": "2026-10-20",
-  "registerversie": "1.4.0",
+  "stand": "2026-10-26",
+  "registerversie": "1.12.0",
   "toelichting": "Kopie van de waarden uit Peil, het parameterregister van Communities Abroad. Wordt bijgewerkt door de Peil-agent; tests/peil.test.mjs vergelijkt peil-config.js hiermee.",
   "parameters": [
+    {
+      "id": "p.fr.gite.degressieve_reeks",
+      "naam": "Afbouw van de FRR-vrijstelling na de volledige vrijstelling",
+      "waarde": {
+        "volledige_vrijstelling_tot_maand": 59,
+        "vrijstelling_periode_1": 0.75,
+        "vrijstelling_periode_2": 0.5,
+        "vrijstelling_periode_3": 0.25,
+        "periode_maanden": 12,
+        "toelichting": "volledige vrijstelling tot het einde van de 59e maand na de maand van oprichting of overname; daarna belast voor een kwart, de helft en driekwart in drie perioden van twaalf maanden"
+      },
+      "waarde_weergave": "100 procent vrijgesteld tot het einde van de 59e maand na de oprichting, daarna 75, 50 en 25 procent in drie perioden van twaalf maanden",
+      "bron_url": "https://bofip.impots.gouv.fr/doctrine/BOI-BIC-CHAMP-80-10-75-40",
+      "verificatiedatum": "2026-10-26"
+    },
+    {
+      "id": "p.fr.gite.minimumheffing_niet_residenten",
+      "naam": "Minimumheffing niet-residenten, bandbreedte",
+      "waarde": {
+        "tarief_tot_grens": 0.2,
+        "tarief_boven_grens": 0.3,
+        "grens": 29579,
+        "grens_herkomst": "bovengrens van de tweede schijf van art. 197 I 1 (inkomsten 2025)"
+      },
+      "waarde_weergave": "20 % tot 29.579 euro netto belastbaar inkomen, 30 % daarboven (inkomsten 2025)",
+      "bron_url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037985917",
+      "verificatiedatum": "2026-10-19"
+    },
+    {
+      "id": "p.fr.ir.schijven",
+      "naam": "Schijven en tarieven impôt sur le revenu, per part (inkomstenjaar 2025, aangifte 2026)",
+      "waarde": [
+        {
+          "tot": 11600,
+          "tarief": 0
+        },
+        {
+          "tot": 29579,
+          "tarief": 0.11
+        },
+        {
+          "tot": 84577,
+          "tarief": 0.3
+        },
+        {
+          "tot": 181917,
+          "tarief": 0.41
+        },
+        {
+          "tot": null,
+          "tarief": 0.45
+        }
+      ],
+      "waarde_weergave": "0 procent tot 11.600, 11 procent tot 29.579, 30 procent tot 84.577, 41 procent tot 181.917, 45 procent daarboven (per part, inkomsten 2025)",
+      "bron_url": "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_integral/Brochure-IR-2026.pdf",
+      "verificatiedatum": "2026-10-19"
+    },
     {
       "id": "p.fr.micro.bic_verhuur",
       "naam": "Micro-BIC verhuur: plafond en abattement per type",
@@ -37,57 +94,6 @@
         }
       },
       "waarde_weergave": "Inkomsten 2025: 15.000 euro bij 30 procent (non classé), 77.700 euro bij 50 procent (overig); inkomsten 2026: plafond overig 83.600 euro",
-      "bron_url": "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_integral/Brochure-IR-2026.pdf",
-      "verificatiedatum": "2026-10-19"
-    },
-    {
-      "id": "p.fr.gite.minimumheffing_niet_residenten",
-      "naam": "Minimumheffing niet-residenten, bandbreedte",
-      "waarde": {
-        "tarief_tot_grens": 0.2,
-        "tarief_boven_grens": 0.3,
-        "grens": 29579,
-        "grens_herkomst": "bovengrens van de tweede schijf van art. 197 I 1 (inkomsten 2025)"
-      },
-      "waarde_weergave": "20 % tot 29.579 euro netto belastbaar inkomen, 30 % daarboven (inkomsten 2025)",
-      "bron_url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000037985917",
-      "verificatiedatum": "2026-10-19"
-    },
-    {
-      "id": "p.fr.gite.degressieve_reeks",
-      "naam": "Degressieve reeks per bezitsjaar in GîteKompas",
-      "status": "te_verifieren",
-      "waarde": null,
-      "waarde_weergave": null,
-      "bron_url": null,
-      "verificatiedatum": null
-    },
-    {
-      "id": "p.fr.ir.schijven",
-      "waarde": [
-        {
-          "tot": 11600,
-          "tarief": 0
-        },
-        {
-          "tot": 29579,
-          "tarief": 0.11
-        },
-        {
-          "tot": 84577,
-          "tarief": 0.3
-        },
-        {
-          "tot": 181917,
-          "tarief": 0.41
-        },
-        {
-          "tot": null,
-          "tarief": 0.45
-        }
-      ],
-      "naam": "Schijven en tarieven impôt sur le revenu, per part (inkomstenjaar 2025, aangifte 2026)",
-      "waarde_weergave": "0 procent tot 11.600, 11 procent tot 29.579, 30 procent tot 84.577, 41 procent tot 181.917, 45 procent daarboven (per part, inkomsten 2025)",
       "bron_url": "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_integral/Brochure-IR-2026.pdf",
       "verificatiedatum": "2026-10-19"
     }

@@ -34,7 +34,7 @@
   const ZFRR_REEKS = { jaar1tm5: 1.0, jaar6: 0.75, jaar7: 0.50, jaar8: 0.25, daarna: 0 };
 
   // Peil-label. Zolang PEIL_LABEL_AAN false is, toont de tool niets over Peil.
-  const PEIL_STAND = "2026-10-20";
+  const PEIL_STAND = "2026-10-26";
   const PEIL_LABEL_AAN = true;
   const PEIL_UITLEG_URL = "https://infofrankrijk.com/ons-manifest-hoe-wij-werken/";
   // Toolkaart van deze tool; de Peil-stempel linkt hiernaartoe (het manifest blijft de link in de voettekstalinea).

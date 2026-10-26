@@ -59,13 +59,17 @@ const KOPPELING = {
     constante: "IR_SCHIJVEN",
     vergelijk: (w) => [["schijven per part", C.IR_SCHIJVEN, w]],
   },
-  // Status te verifiëren in Peil (waarde null). De reeks 75/50/25 staat in art. 44 quindecies A, I E CGI (keuring 26-10-2026, correctievoorstel bij Peil).
-  // Krijgt Peil een waarde, dan faalt de eerste controle en moet ZFRR_REEKS ermee vergeleken worden.
+  // Vastgesteld in Peil (sinds 1.11.0): volledige vrijstelling tot het einde van de 59e maand, daarna 75, 50 en 25 procent vrijgesteld
+  // in drie perioden van twaalf maanden (art. 44 quindecies A, I E CGI). De tool rekent per exploitatiejaar: jaar 1 tot en met 5 volledig, jaar 6, 7 en 8 de afbouw.
   "p.fr.gite.degressieve_reeks": {
     constante: "ZFRR_REEKS (art. 44 quindecies A, I E CGI)",
     vergelijk: (w, kop) => [
-      ["Peil heeft nog geen waarde (null); wijzigt dat, dan moet ZFRR_REEKS vergeleken worden", null, w],
-      ["status in waarden.json is te_verifieren", "te_verifieren", kop.status],
+      ["volledige vrijstelling tot en met maand 59 (jaar 1 tot en met 5)", 59, w && w.volledige_vrijstelling_tot_maand],
+      ["jaar 6: vrijgesteld deel", C.ZFRR_REEKS.jaar6, w && w.vrijstelling_periode_1],
+      ["jaar 7: vrijgesteld deel", C.ZFRR_REEKS.jaar7, w && w.vrijstelling_periode_2],
+      ["jaar 8: vrijgesteld deel", C.ZFRR_REEKS.jaar8, w && w.vrijstelling_periode_3],
+      ["periode van twaalf maanden", 12, w && w.periode_maanden],
+      ["status in waarden.json is vastgesteld (geen status)", undefined, kop.status],
       ["tool noemt de reeks geen aanname meer", false, /nog niet bij de bron geverifieerd|is een aanname van deze tool en nog niet/.test(indexHtml)],
       ["tool noemt de wettelijke grondslag (zfrrNote)", true, /75, 50 en 25 procent \(art\. 44 quindecies A, I B en I E CGI\)/.test(indexHtml)],
       ["config noemt de wettelijke grondslag", true, /art\. 44 quindecies A, I B en I E CGI/.test(configCode)],
